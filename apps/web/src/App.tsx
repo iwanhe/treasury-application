@@ -35,6 +35,8 @@ type RuleForm = {
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
+  const [demoIdentity, setDemoIdentity] = useState('maker');
+  const [demoLoading, setDemoLoading] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companyId, setCompanyId] = useState<string>();
@@ -48,6 +50,10 @@ export default function App() {
   const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
+    if (import.meta.env.VITE_AUTH_MODE === 'demo') {
+      setAuthReady(true);
+      return;
+    }
     let alive = true;
     initializeOidc()
       .then(ok => {
@@ -65,6 +71,29 @@ export default function App() {
     }, 20000);
     return () => { alive = false; window.clearInterval(refresh); };
   }, []);
+
+  async function loginDemo() {
+    setDemoLoading(true);
+    setError(undefined);
+    try {
+      const base = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
+      const response = await fetch(`${base}/auth/demo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity: demoIdentity })
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.message ?? 'Demo login gagal.');
+      const token = body.accessToken as string;
+      if (!token) throw new Error('Backend tidak mengembalikan access token.');
+      setTokenProvider(() => token);
+      setAuthenticated(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Demo login gagal.');
+    } finally {
+      setDemoLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!authenticated) return;
@@ -140,13 +169,14 @@ export default function App() {
   ];
 
   if (!authReady) return <div className="empty-state"><Spin size="large" /><p>Memeriksa sesi SSO…</p></div>;
+  if (!authenticated && import.meta.env.VITE_AUTH_MODE === 'demo') return <div className="empty-state"><Card title="Treasury Ticketing — Personal Demo" style={{width:'min(420px, 92vw)'}}><Typography.Paragraph type="secondary">Gunakan identitas dummy yang sudah disiapkan. Sesi demo berlaku maksimal 2 jam.</Typography.Paragraph><Select aria-label="Identitas demo" value={demoIdentity} onChange={setDemoIdentity} style={{width:'100%',marginBottom:16}} options={[{value:'maker',label:'Treasury Maker'},{value:'checker',label:'Treasury Checker'},{value:'admin',label:'Treasury Admin'}]}/>{error && <Alert type="error" message={error} style={{marginBottom:12}}/><Button type="primary" block loading={demoLoading} onClick={()=>void loginDemo()}>Masuk Demo</Button></Card></div>;
   if (!authenticated) return <div className="empty-state"><Alert type="error" message={error ?? 'Autentikasi diperlukan.'} /></div>;
 
   return <ConfigProvider theme={{ token: { colorPrimary: '#167d73', borderRadius: 8, fontFamily: 'Inter, system-ui, sans-serif' } }}>
     {contextHolder}
     <div className="app-shell">
       <header className="topbar"><div className="brand"><div className="brand-mark">T</div><span>TREASURY <span style={{fontWeight:400,opacity:.75}}>PORTAL</span></span></div>
-        <Space><Typography.Text style={{color:'white'}}>{oidc.tokenParsed?.preferred_username ?? oidc.tokenParsed?.email ?? 'User'}</Typography.Text><Button type="text" onClick={() => oidc.logout({ redirectUri: window.location.origin })}>Keluar</Button></Space>
+        <Space><Typography.Text style={{color:'white'}}>{oidc.tokenParsed?.preferred_username ?? oidc.tokenParsed?.email ?? 'User'}</Typography.Text><Button type="text" onClick={() => { if (import.meta.env.VITE_AUTH_MODE === 'demo') { setAuthenticated(false); setTokenProvider(() => undefined); } else { void oidc.logout({ redirectUri: window.location.origin }); } }}>Keluar</Button></Space>
       </header>
       <main className="page">
         <div className="page-heading"><div><div className="eyebrow">Treasury operations / configuration</div><h1>Approval Rule Administration</h1><div className="subtle">Atur jalur persetujuan berdasarkan jenis transaksi, nominal, dan perusahaan.</div></div>
