@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, Matches, Max, Min, ValidateIf } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsUUID, Matches, Max, Min, ValidateIf } from 'class-validator';
 import { RequestType } from '@prisma/client';
 export class CreateApprovalRuleDto {
   @IsEnum(RequestType) requestType!: RequestType;
@@ -7,5 +7,5 @@ export class CreateApprovalRuleDto {
   @Matches(/^\d{1,16}(\.\d{1,2})?$/) minAmount!: string;
   @IsOptional() @Matches(/^\d{1,16}(\.\d{1,2})?$/) maxAmount?: string;
   @ValidateIf(o => o.approverUserId === undefined) @IsString() approverRoleCode?: string;
-  @ValidateIf(o => o.approverRoleCode === undefined) @IsString() approverUserId?: string;
+  @ValidateIf(o => o.approverRoleCode === undefined) @IsUUID() approverUserId?: string;
 }
