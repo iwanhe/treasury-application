@@ -8,6 +8,7 @@ Enterprise Treasury Service Request and Financial Information Portal.
 - PostgreSQL + Prisma ORM
 - Redis for background jobs (planned)
 - Docker Compose and GitHub Actions
+- Keycloak OIDC for local development; Microsoft Entra ID is a future provider option
 
 ## MVP scope
 - Development authentication foundation
@@ -18,11 +19,21 @@ Enterprise Treasury Service Request and Financial Information Portal.
 
 Planned increments: SLA management, email notifications, financial data upload and viewing, Excel export, Oracle EBS integration, and SAP integration.
 
+## Local development
+
+1. Copy `.env.example` to the API environment file used by your local workflow.
+2. Start infrastructure: `docker compose up -d postgres redis keycloak`.
+3. Open Keycloak at http://localhost:8080 and select realm `treasury-dev`.
+4. Follow [Keycloak development setup](docs/keycloak-development.md) for OIDC configuration and identity provisioning.
+5. Install dependencies and start the API/web apps using the scripts in the root package.
+
+The Keycloak realm import includes development-only credentials. Do not expose the development setup publicly or reuse its credentials.
+
 ## Repository status
-Initial project bootstrap. This is a development starter, not production-ready.
+This is a development starter, not production-ready. Database migrations, production identity lifecycle, comprehensive authorization tests, and deployment hardening remain outstanding.
 
 ## Security requirements before production
-- SSO/OIDC integration
+- SSO/OIDC integration and corporate identity lifecycle provisioning
 - Enforced authorization and company-level data isolation
 - PostgreSQL Row-Level Security where appropriate
 - Approval segregation of duties
@@ -30,4 +41,4 @@ Initial project bootstrap. This is a development starter, not production-ready.
 - Secrets management, attachment scanning, and security testing
 - No banking passwords or credentials stored in ticket records
 
-See the `docs/` directory for architecture, business process, API, and roadmap documentation as these are added.
+See the `docs/` directory for architecture, business process, API, and roadmap documentation.
