@@ -21,7 +21,7 @@ export class DemoAuthController {
     }
     const secretValue = this.config.get<string>('DEMO_TOKEN_SECRET');
     const accessCode = this.config.get<string>('DEMO_ACCESS_CODE');
-    if (!secretValue || secretValue.length < 32 || !accessCode || accessCode.length < 12) {
+    if (!secretValue || secretValue.length < 32 || !accessCode || accessCode.length < 24) {
       throw new ServiceUnavailableException('Demo authentication is not securely configured.');
     }
     const suppliedCode = typeof body?.accessCode === 'string' ? Buffer.from(body.accessCode) : Buffer.alloc(0);
