@@ -36,6 +36,7 @@ jobs:
         run: pnpm --filter @treasury/api prisma:deploy
       - run: pnpm --filter @treasury/api test
       - run: pnpm --filter @treasury/api build
+      - run: pnpm --filter @treasury/web build
       - name: Validate Keycloak realm JSON
         run: python -m json.tool docker/keycloak/treasury-dev-realm.json > /dev/null
       - name: Validate Docker Compose
