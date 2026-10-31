@@ -7,8 +7,28 @@ services:
       POSTGRES_DB: treasury
     ports: ["5432:5432"]
     volumes: [treasury_pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U treasury -d treasury"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+    ports: ["8080:8080"]
+    volumes:
+      - ./docker/keycloak:/opt/keycloak/data/import:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9000'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
 volumes:
   treasury_pgdata:
