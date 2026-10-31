@@ -21,8 +21,8 @@ export class TreasuryTicketsController {
 
   @Get()
   @RequireCompanyRoles(...COMPANY_TICKET_ROLES)
-  list(@Param('companyId') companyId: string, @Query() query: ListTicketsDto) {
-    return this.tickets.list(companyId, query);
+  list(@CurrentUser() user: AuthenticatedPrincipal, @Param('companyId') companyId: string, @Query() query: ListTicketsDto) {
+    return this.tickets.list(user.userId, companyId, query);
   }
 
   @Post()
@@ -37,8 +37,8 @@ export class TreasuryTicketsController {
 
   @Get(':ticketId')
   @RequireCompanyRoles(...COMPANY_TICKET_ROLES)
-  get(@Param('companyId') companyId: string, @Param('ticketId') ticketId: string) {
-    return this.tickets.get(companyId, ticketId);
+  get(@CurrentUser() user: AuthenticatedPrincipal, @Param('companyId') companyId: string, @Param('ticketId') ticketId: string) {
+    return this.tickets.get(user.userId, companyId, ticketId);
   }
 
   @Patch(':ticketId')
