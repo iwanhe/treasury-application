@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { createApp } from '../src/main';
 
@@ -11,16 +11,21 @@ async function getHandler() {
     return app;
   })();
   const app = await appPromise;
-  return app.getHttpAdapter().getInstance();
+  return app.getHttpAdapter().getInstance() as (
+    req: IncomingMessage,
+    res: ServerResponse
+  ) => void;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
     const express = await getHandler();
     return express(req, res);
   } catch (error) {
     appPromise = undefined;
     console.error('Treasury API initialization failed', error);
-    return res.status(500).json({ statusCode: 500, message: 'API initialization failed' });
+    res.statusCode = 500;
+    res.setHeader('Content-Type', 'application/json');
+    return res.end(JSON.stringify({ statusCode: 500, message: 'API initialization failed' }));
   }
 }
