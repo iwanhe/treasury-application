@@ -6,7 +6,7 @@ import {
   UnauthorizedException
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthenticatedRequest } from './auth.types';
 
@@ -29,7 +29,7 @@ export class OidcJwtGuard implements CanActivate {
     const token = authorization.slice(7);
     try {
       const decoded = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8')) as { iss?: string };
-      let payload;
+      let payload: JWTPayload;
       if (decoded.iss === 'treasury-demo') {
         if (this.config.get('DEMO_AUTH_ENABLED') !== 'true') {
           throw new UnauthorizedException('Demo authentication is disabled.');
