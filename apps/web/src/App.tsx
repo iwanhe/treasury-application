@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Col, ConfigProvider, Form, Input, InputNumber, Modal, Row, Select, Space, Spin, Statistic, Table, Tag, Typography, message } from 'antd';
+import { Alert, Button, Card, Col, ConfigProvider, Form, Input, InputNumber, Modal, Row, Select, Space, Spin, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Keycloak from 'keycloak-js';
 import { api, setTokenProvider } from './api';
