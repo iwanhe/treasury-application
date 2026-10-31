@@ -1,0 +1,122 @@
+{
+  "realm": "treasury-dev",
+  "enabled": true,
+  "displayName": "Treasury Development",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "REQUESTER"
+      },
+      {
+        "name": "TREASURY_MAKER"
+      },
+      {
+        "name": "TREASURY_CHECKER"
+      },
+      {
+        "name": "APPROVER"
+      },
+      {
+        "name": "ADMIN"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "treasury-api",
+      "name": "Treasury API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "attributes": {
+        "access.token.signed.response.alg": "RS256"
+      }
+    },
+    {
+      "clientId": "treasury-web",
+      "name": "Treasury Web",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "treasury-api-audience",
+      "description": "Adds the Treasury API audience to web access tokens",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "treasury-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "treasury-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": [
+    "web-origins",
+    "acr",
+    "profile",
+    "roles",
+    "basic",
+    "email",
+    "treasury-api-audience"
+  ],
+  "users": [
+    {
+      "username": "treasury.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Treasury",
+      "lastName": "Admin",
+      "email": "treasury.admin@example.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ChangeMe123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "ADMIN",
+        "REQUESTER"
+      ]
+    }
+  ]
+}
