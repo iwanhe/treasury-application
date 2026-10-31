@@ -175,8 +175,8 @@ export default function App() {
           <Col span={8}><Form.Item name="currencyCode" label="Mata uang" rules={[{required:true,pattern:/^[A-Z]{3}$/}]}><Input maxLength={3}/></Form.Item></Col>
           <Col span={8}><Form.Item name="minAmount" label="Minimum" rules={[{required:true}]}><Input/></Form.Item></Col></Row>
         <Form.Item name="maxAmount" label="Maksimum (kosong = tanpa batas)"><Input/></Form.Item>
-        <Form.Item name="approverRoleCode" label="Role approver" rules={[{required:!editing?.approverUserId}]}><Select allowClear options={roleOptions} onChange={()=>form.setFieldValue('approverUserId',undefined)}/></Form.Item>
-        <Form.Item name="approverUserId" label="Atau user approver (ID)" rules={[{required:!editing?.approverRoleCode}]}><Input allowClear onChange={()=>form.setFieldValue('approverRoleCode',undefined)}/></Form.Item>
+        <Form.Item name="approverRoleCode" label="Role approver" rules={[{validator: (_, value) => value || form.getFieldValue('approverUserId') ? Promise.resolve() : Promise.reject(new Error('Pilih role atau user approver.'))}]}><Select allowClear options={roleOptions} onChange={()=>form.setFieldValue('approverUserId',undefined)}/></Form.Item>
+        <Form.Item name="approverUserId" label="Atau user approver (ID)" rules={[{validator: (_, value) => value || form.getFieldValue('approverRoleCode') ? Promise.resolve() : Promise.reject(new Error('Pilih role atau user approver.'))}]}><Input allowClear onChange={()=>form.setFieldValue('approverRoleCode',undefined)}/></Form.Item>
       </Form>
     </Modal>
   </ConfigProvider>;
