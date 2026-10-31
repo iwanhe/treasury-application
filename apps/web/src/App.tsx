@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import Keycloak from 'keycloak-js';
 import { api, setTokenProvider } from './api';
 import type { Company, Rule } from './api';
+import TicketsPanel from './TicketsPanel';
 
 const requestTypes = [
   'BANK_ACCOUNT_OPEN', 'BANK_ACCOUNT_CLOSE', 'INTERNET_BANKING', 'FINANCIAL_INVESTMENT',
@@ -138,6 +139,7 @@ export default function App() {
         </div>
         {error && <Alert type="error" showIcon message={error} style={{marginBottom:16}} closable onClose={()=>setError(undefined)} />}
         {!companies.length && <Alert type="warning" message="Akun belum memiliki akses ke perusahaan. Hubungi administrator untuk provisioning." />}
+        {selectedCompany && <TicketsPanel companyId={selectedCompany.id} canCreate={selectedCompany.roles.some(role => ['REQUESTER','TREASURY_MAKER','ADMIN'].includes(role))} />}
         {selectedCompany && <>
           <div className="metric-row">
             <div className="metric"><strong>{ownRules.length}</strong><span>Aturan khusus PT</span></div>
