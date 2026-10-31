@@ -1,0 +1,64 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${TREASURY_DATABASE_URL}
+      WEB_ORIGIN: ${WEB_ORIGIN}
+      OIDC_ISSUER: https://${AUTH_HOST}/realms/treasury-dev
+      OIDC_AUDIENCE: treasury-api
+      OIDC_JWKS_URI: https://${AUTH_HOST}/realms/treasury-dev/protocol/openid-connect/certs
+    expose:
+      - "3000"
+    networks:
+      - staging
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    command: ["start"]
+    restart: unless-stopped
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: ${KEYCLOAK_JDBC_URL}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USERNAME}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_HOSTNAME: https://${AUTH_HOST}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    expose:
+      - "8080"
+    networks:
+      - staging
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      API_HOST: ${API_HOST}
+      AUTH_HOST: ${AUTH_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - keycloak
+    networks:
+      - staging
+
+networks:
+  staging:
+
+volumes:
+  caddy_data:
+  caddy_config:
