@@ -7,6 +7,20 @@ on:
 jobs:
   api:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: treasury
+          POSTGRES_PASSWORD: treasury_dev
+          POSTGRES_DB: treasury
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U treasury -d treasury"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DATABASE_URL: postgresql://treasury:treasury_dev@localhost:5432/treasury?schema=public
     steps:
@@ -18,6 +32,8 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm --filter @treasury/api prisma:validate
       - run: pnpm --filter @treasury/api prisma:generate
+      - name: Apply database migrations
+        run: pnpm --filter @treasury/api prisma:deploy
       - run: pnpm --filter @treasury/api test
       - run: pnpm --filter @treasury/api build
       - name: Validate Keycloak realm JSON
