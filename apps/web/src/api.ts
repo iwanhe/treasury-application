@@ -4,7 +4,7 @@ export type Rule = {
   minAmount: string; maxAmount: string | null; approverRoleCode: string | null; approverUserId: string | null;
   isActive: boolean; createdAt: string; updatedAt: string;
 };
-const API = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const API = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
 let tokenProvider: () => string | undefined = () => undefined;
 export function setTokenProvider(provider: () => string | undefined) { tokenProvider = provider; }
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
