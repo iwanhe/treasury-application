@@ -34,7 +34,8 @@ async function cleanup(f: Fixture) {
   await prisma.ticketApproval.deleteMany({ where: { ticketId: { in: ids } } });
   await prisma.ticketAttachment.deleteMany({ where: { ticketId: { in: ids } } });
   await prisma.treasuryTicket.deleteMany({ where: { id: { in: ids } } });
-  await prisma.approvalRule.deleteMany({ where: { OR: [{ companyId: f.companyId }, { id: { in: f.globalRuleIds } }] } });\n  await prisma.ticketCounter.deleteMany({ where: { companyId: f.companyId } });
+  await prisma.approvalRule.deleteMany({ where: { OR: [{ companyId: f.companyId }, { id: { in: f.globalRuleIds } }] } });
+  await prisma.ticketCounter.deleteMany({ where: { companyId: f.companyId } });
   await prisma.userCompanyRole.deleteMany({ where: { companyId: { in: [f.companyId, f.otherCompanyId] } } });
   await prisma.company.deleteMany({ where: { id: { in: [f.companyId, f.otherCompanyId] } } });
   await prisma.user.deleteMany({ where: { id: { in: [f.requesterId, f.approverId, f.secondApproverId] } } });
