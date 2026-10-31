@@ -4,7 +4,7 @@ This profile is exclusively for a personal demonstration using synthetic data. I
 
 ## Deployment topology
 
-Create two Vercel projects from this repository and pin both to `feature/vercel-hobby-poc`:
+Create two Vercel projects from this repository and pin both to `feature/vercel-hobby-poc` (Settings → Environments → Production → Branch Tracking):
 
 - Web project Root Directory: `apps/web`
 - API project Root Directory: `apps/api`
@@ -28,12 +28,15 @@ The SPA rewrite is provided by `apps/web/vercel.json`.
 
 ## API project
 
-- Framework preset: Other
-- Build command: `pnpm --filter @treasury/api build`
-- Install command: `pnpm install --no-frozen-lockfile`
+- Framework preset: Other (not the NestJS preset; the function entrypoint is `api/index.ts`)
+- Build command: `pnpm --filter @treasury/api prisma:generate && pnpm --filter @treasury/api build && mkdir -p public`
+- Output directory: `public` (kept empty so no source files are served statically)
+- Install command: `pnpm install --frozen-lockfile`
+- Function region: `sin1` (same region as the Neon database)
+- All paths are rewritten to the `api/index.ts` function by `apps/api/vercel.json`
 - Runtime entrypoint: `api/index.ts`
 - Environment variables:
-  - `DATABASE_URL`: Neon pooled connection string
+  - `DATABASE_URL`: Neon pooled connection string for the `treasury` database (not `neondb`)
   - `DIRECT_URL`: Neon direct connection string; never expose it to the browser
   - `WEB_ORIGIN`: exact web deployment origin, not a wildcard
   - `DEMO_AUTH_ENABLED=true`: explicitly enables demo login
