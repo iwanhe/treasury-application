@@ -28,6 +28,8 @@ export default function TicketsPanel({ companyId, canCreate, canApprove }: { com
   const [form] = Form.useForm();
   const [busy,setBusy] = useState(false);
   const [msg,contextHolder] = message.useMessage();
+  // Static Modal.confirm does not render under React 19 with antd v5; use the context-aware hook.
+  const [modal,modalContextHolder] = Modal.useModal();
 
   async function load() {
     setLoading(true);
@@ -46,7 +48,7 @@ export default function TicketsPanel({ companyId, canCreate, canApprove }: { com
   useEffect(()=>{ void loadInbox(); },[companyId,canApprove]);
   async function decide(item: PendingApproval, decision:'APPROVED'|'REJECTED'|'RETURNED') {
     const labels = { APPROVED:'Setujui', REJECTED:'Tolak', RETURNED:'Kembalikan' };
-    Modal.confirm({ title:labels[decision] + ' pengajuan?', content:item.ticket.ticketNo + ' — ' + item.ticket.title,
+    modal.confirm({ title:labels[decision] + ' pengajuan?', content:item.ticket.ticketNo + ' — ' + item.ticket.title,
       okText:labels[decision], cancelText:'Batal', okButtonProps:decision === 'REJECTED' ? {danger:true} : {},
       onOk:async () => {
         await api('/companies/' + companyId + '/tickets/' + item.ticket.id + '/approvals/' + item.id + '/decision',
@@ -76,7 +78,7 @@ export default function TicketsPanel({ companyId, canCreate, canApprove }: { com
     finally { setBusy(false); }
   }
   async function action(ticket: Ticket, verb: 'submit'|'cancel') {
-    Modal.confirm({
+    modal.confirm({
       title: verb === 'submit' ? 'Submit pengajuan?' : 'Batalkan pengajuan?',
       content: ticket.ticketNo,
       okText: verb === 'submit' ? 'Submit' : 'Batalkan',
@@ -122,6 +124,7 @@ export default function TicketsPanel({ companyId, canCreate, canApprove }: { com
   ];
   return <>
     {contextHolder}
+    {modalContextHolder}
     {canApprove && <Card className="panel" style={{marginBottom:20}} bordered={false} styles={{body:{padding:0}}}>
       <div className="panel-heading"><div><Typography.Title level={5} style={{margin:0}}>Approval Inbox</Typography.Title><Typography.Text type="secondary">Pengajuan yang menunggu keputusan Anda pada perusahaan ini.</Typography.Text></div><Tag color="processing">{inbox.length} pending</Tag></div>
       <div className="panel-body"><Table rowKey="id" columns={inboxColumns} dataSource={inbox} loading={inboxLoading} pagination={{pageSize:5}} scroll={{x:850}} locale={{emptyText:'Tidak ada approval yang menunggu.'}} /></div>
