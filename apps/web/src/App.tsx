@@ -36,6 +36,7 @@ type RuleForm = {
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [demoIdentity, setDemoIdentity] = useState('maker');
+  const [demoAccessCode, setDemoAccessCode] = useState('');
   const [demoLoading, setDemoLoading] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -80,7 +81,7 @@ export default function App() {
       const response = await fetch(`${base}/auth/demo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identity: demoIdentity })
+        body: JSON.stringify({ identity: demoIdentity, accessCode: demoAccessCode })
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.message ?? 'Demo login gagal.');
@@ -169,7 +170,7 @@ export default function App() {
   ];
 
   if (!authReady) return <div className="empty-state"><Spin size="large" /><p>Memeriksa sesi SSO…</p></div>;
-  if (!authenticated && import.meta.env.VITE_AUTH_MODE === 'demo') return <div className="empty-state"><Card title="Treasury Ticketing — Personal Demo" style={{width:'min(420px, 92vw)'}}><Typography.Paragraph type="secondary">Gunakan identitas dummy yang sudah disiapkan. Sesi demo berlaku maksimal 2 jam.</Typography.Paragraph><Select aria-label="Identitas demo" value={demoIdentity} onChange={setDemoIdentity} style={{width:'100%',marginBottom:16}} options={[{value:'maker',label:'Treasury Maker'},{value:'checker',label:'Treasury Checker'},{value:'admin',label:'Treasury Admin'}]}/>{error && <Alert type="error" message={error} style={{marginBottom:12}}/><Button type="primary" block loading={demoLoading} onClick={()=>void loginDemo()}>Masuk Demo</Button></Card></div>;
+  if (!authenticated && import.meta.env.VITE_AUTH_MODE === 'demo') return <div className="empty-state"><Card title="Treasury Ticketing — Personal Demo" style={{width:'min(420px, 92vw)'}}><Typography.Paragraph type="secondary">Gunakan identitas dummy yang sudah disiapkan. Sesi demo berlaku maksimal 2 jam.</Typography.Paragraph><Select aria-label="Identitas demo" value={demoIdentity} onChange={setDemoIdentity} style={{width:'100%',marginBottom:12}} options={[{value:'maker',label:'Treasury Maker'},{value:'checker',label:'Treasury Checker'},{value:'admin',label:'Treasury Admin'}]}/>{error && <Alert type="error" message={error} style={{marginBottom:12}}/><Button type="primary" block loading={demoLoading} onClick={()=>void loginDemo()}>Masuk Demo</Button></Card></div>;
   if (!authenticated) return <div className="empty-state"><Alert type="error" message={error ?? 'Autentikasi diperlukan.'} /></div>;
 
   return <ConfigProvider theme={{ token: { colorPrimary: '#167d73', borderRadius: 8, fontFamily: 'Inter, system-ui, sans-serif' } }}>
