@@ -19,6 +19,7 @@ export default function TicketsPanel({ companyId, canCreate }: { companyId: stri
   const [loading,setLoading] = useState(false);
   const [status,setStatus] = useState<string>();
   const [open,setOpen] = useState(false);
+  const [editingTicket,setEditingTicket] = useState<Ticket>();
   const [detail,setDetail] = useState<Ticket>();
   const [form] = Form.useForm();
   const [busy,setBusy] = useState(false);
@@ -32,14 +33,21 @@ export default function TicketsPanel({ companyId, canCreate }: { companyId: stri
   }
   useEffect(()=>{ void load(); },[companyId,status]);
 
-  async function createDraft() {
+  async function saveDraft() {
     const v = await form.validateFields();
     setBusy(true);
     try {
-      await api(`/companies/${companyId}/tickets`, { method:'POST', body:JSON.stringify({
+      const payload = {
         ...v, amount:String(v.amount), currencyCode:v.currencyCode.toUpperCase()
-      })});
-      msg.success('Draft ticket berhasil dibuat.'); setOpen(false); form.resetFields(); await load();
+      };
+      if (editingTicket) {
+        await api('/companies/' + companyId + '/tickets/' + editingTicket.id, { method:'PATCH', body:JSON.stringify(payload) });
+        msg.success('Draft ticket berhasil diperbarui.');
+      } else {
+        await api('/companies/' + companyId + '/tickets', { method:'POST', body:JSON.stringify(payload) });
+        msg.success('Draft ticket berhasil dibuat.');
+      }
+      setOpen(false); setEditingTicket(undefined); form.resetFields(); await load();
     } catch(e) { msg.error(e instanceof Error ? e.message : 'Gagal membuat draft.'); }
     finally { setBusy(false); }
   }
@@ -56,6 +64,11 @@ export default function TicketsPanel({ companyId, canCreate }: { companyId: stri
       }
     });
   }
+  function editDraft(ticket: Ticket) {
+    setEditingTicket(ticket);
+    form.setFieldsValue({ type:ticket.type, title:ticket.title, description:ticket.description, amount:Number(ticket.amount), currencyCode:ticket.currencyCode.trim(), priority:ticket.priority });
+    setOpen(true);
+  }
   async function showDetail(ticket: Ticket) {
     try { setDetail(await api<Ticket>(`/companies/${companyId}/tickets/${ticket.id}`)); }
     catch(e) { msg.error(e instanceof Error ? e.message : 'Gagal memuat detail.'); }
@@ -67,6 +80,7 @@ export default function TicketsPanel({ companyId, canCreate }: { companyId: stri
     {title:'Status',dataIndex:'status',render:(v:string)=><Tag color={statusColor[v] ?? 'default'}>{v.replaceAll('_',' ')}</Tag>},
     {title:'Tanggal',dataIndex:'createdAt',render:(v:string)=>new Date(v).toLocaleDateString('id-ID')},
     {title:'Aksi',width:170,render:(_,t)=><Space>
+      {(t.status==='DRAFT'||t.status==='RETURNED') && <Button size="small" onClick={()=>editDraft(t)}>Edit</Button>}
       {(t.status==='DRAFT'||t.status==='RETURNED') && <Button size="small" type="primary" onClick={()=>void action(t,'submit')}>Submit</Button>}
       {(t.status==='DRAFT'||t.status==='SUBMITTED') && <Button size="small" danger onClick={()=>void action(t,'cancel')}>Cancel</Button>}
     </Space>}
@@ -79,12 +93,12 @@ export default function TicketsPanel({ companyId, canCreate }: { companyId: stri
         <Space>
           <Select allowClear placeholder="Semua status" style={{width:155}} value={status} onChange={setStatus}
             options={['DRAFT','SUBMITTED','IN_REVIEW','RETURNED','APPROVED','REJECTED','IN_PROGRESS','COMPLETED','CANCELLED'].map(x=>({value:x,label:x.replaceAll('_',' ')}))}/>
-          {canCreate && <Button type="primary" onClick={()=>{form.resetFields();form.setFieldsValue({type:'FINANCIAL_INVESTMENT',currencyCode:'IDR',priority:'NORMAL',amount:0});setOpen(true);}}>+ Buat pengajuan</Button>}
+          {canCreate && <Button type="primary" onClick={()=>{setEditingTicket(undefined);form.resetFields();form.setFieldsValue({type:'FINANCIAL_INVESTMENT',currencyCode:'IDR',priority:'NORMAL',amount:0});setOpen(true);}}>+ Buat pengajuan</Button>}
         </Space>
       </div>
       <div className="panel-body"><Table rowKey="id" columns={columns} dataSource={rows} loading={loading} pagination={{pageSize:8}} scroll={{x:900}} locale={{emptyText:'Belum ada pengajuan pada filter ini.'}} /></div>
     </Card>
-    <Modal title="Buat draft Treasury Ticket" open={open} onCancel={()=>setOpen(false)} onOk={()=>void createDraft()} confirmLoading={busy} okText="Simpan draft" cancelText="Batal" destroyOnClose>
+    <Modal title={editingTicket ? "Edit " + editingTicket.ticketNo : "Buat draft Treasury Ticket"} open={open} onCancel={()=>{setOpen(false);setEditingTicket(undefined);}} onOk={()=>void saveDraft()} confirmLoading={busy} okText={editingTicket ? "Simpan perubahan" : "Simpan draft"} cancelText="Batal" destroyOnClose>
       <Form form={form} layout="vertical">
         <Form.Item name="type" label="Jenis pengajuan" rules={[{required:true}]}><Select options={types}/></Form.Item>
         <Form.Item name="title" label="Judul" rules={[{required:true,min:3,max:200}]}><Input maxLength={200}/></Form.Item>
