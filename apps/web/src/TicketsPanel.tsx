@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, Card, Col, Descriptions, Form, Input, InputNumber, Modal, Row, Select, Space, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from './api';
+import { canEditTicket, canCancelTicket, canSubmitTicket } from './ticket-permissions';
 
 type PendingApproval = { id:string; sequence:number; roleCode:string|null; decision:string; ticket:Ticket };
 type Ticket = {
@@ -103,9 +104,9 @@ export default function TicketsPanel({ companyId, canCreate, canApprove }: { com
     {title:'Status',dataIndex:'status',render:(v:string)=><Tag color={statusColor[v] ?? 'default'}>{v.replaceAll('_',' ')}</Tag>},
     {title:'Tanggal',dataIndex:'createdAt',render:(v:string)=>new Date(v).toLocaleDateString('id-ID')},
     {title:'Aksi',width:170,render:(_,t)=><Space>
-      {(t.status==='DRAFT'||t.status==='RETURNED') && <Button size="small" onClick={()=>editDraft(t)}>Edit</Button>}
-      {(t.status==='DRAFT'||t.status==='RETURNED') && <Button size="small" type="primary" onClick={()=>void action(t,'submit')}>Submit</Button>}
-      {(t.status==='DRAFT'||t.status==='SUBMITTED') && <Button size="small" danger onClick={()=>void action(t,'cancel')}>Cancel</Button>}
+      {canEditTicket(t.status) && <Button size="small" onClick={()=>editDraft(t)}>Edit</Button>}
+      {canSubmitTicket(t.status) && <Button size="small" type="primary" onClick={()=>void action(t,'submit')}>Submit</Button>}
+      {canCancelTicket(t.status) && <Button size="small" danger onClick={()=>void action(t,'cancel')}>Cancel</Button>}
     </Space>}
   ];
   const inboxColumns: ColumnsType<PendingApproval> = [
