@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 export type CandidateApprovalRule = {
   id: string; companyId: string | null; sequence: number; currencyCode: string;
+  approverRoleCode: string | null; approverUserId: string | null;
   minAmount: Prisma.Decimal; maxAmount: Prisma.Decimal | null;
 };
 export function selectApplicableApprovalRules(
