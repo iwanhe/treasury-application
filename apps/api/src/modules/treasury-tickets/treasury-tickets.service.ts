@@ -181,6 +181,55 @@ export class TreasuryTicketsService {
     });
   }
 
+  async updateApprovalRule(actorId: string, companyId: string, ruleId: string, dto: import('./dto/update-approval-rule.dto').UpdateApprovalRuleDto) {
+    return this.prisma.$transaction(async tx => {
+      const existing = await tx.approvalRule.findFirst({ where: { id: ruleId, companyId } });
+      if (!existing) throw new NotFoundException('Company approval rule not found.');
+      const requestType = dto.requestType ?? existing.requestType;
+      const sequence = dto.sequence ?? existing.sequence;
+      const currencyCode = dto.currencyCode ?? existing.currencyCode.trim();
+      const min = dto.minAmount !== undefined ? new Prisma.Decimal(dto.minAmount) : existing.minAmount;
+      const max = dto.maxAmount === undefined ? existing.maxAmount :
+        dto.maxAmount === null ? null : new Prisma.Decimal(dto.maxAmount);
+      const approverRoleCode = dto.approverRoleCode === undefined ? existing.approverRoleCode : dto.approverRoleCode;
+      const approverUserId = dto.approverUserId === undefined ? existing.approverUserId : dto.approverUserId;
+      const isActive = dto.isActive ?? existing.isActive;
+      if (max && max.lessThan(min)) throw new BadRequestException('maxAmount must be greater than or equal to minAmount.');
+      if (Boolean(approverRoleCode) === Boolean(approverUserId)) throw new BadRequestException('Specify exactly one approverRoleCode or approverUserId.');
+      if (approverRoleCode) {
+        if (!['APPROVER', 'TREASURY_CHECKER', 'ADMIN'].includes(approverRoleCode)) {
+          throw new BadRequestException('Approver role must be APPROVER, TREASURY_CHECKER, or ADMIN.');
+        }
+        const role = await tx.role.findUnique({ where: { code: approverRoleCode }, select: { id: true } });
+        if (!role) throw new NotFoundException('Approver role does not exist.');
+      } else {
+        const membership = await tx.userCompanyRole.findFirst({ where: { companyId, userId: approverUserId!,
+          user: { status: 'ACTIVE' }, role: { code: { in: ['APPROVER', 'ADMIN'] } } }, select: { id: true } });
+        if (!membership) throw new BadRequestException('Named approver must be an active APPROVER or ADMIN member of this company.');
+      }
+      if (isActive) {
+        const duplicate = await tx.approvalRule.findFirst({ where: { id: { not: ruleId }, companyId, requestType,
+          currencyCode, sequence, isActive: true } });
+        if (duplicate) throw new BadRequestException('An active rule already exists for this company, request type, currency, and sequence.');
+      }
+      const updated = await tx.approvalRule.update({ where: { id: ruleId }, data: {
+        requestType, sequence, currencyCode, minAmount: min, maxAmount: max,
+        approverRoleCode, approverUserId, isActive
+      }});
+      const company = await tx.company.findUniqueOrThrow({ where: { id: companyId }, select: { code: true } });
+      await tx.auditLog.create({ data: { actorId, companyCode: company.code, action: AuditAction.UPDATE,
+        entityType: 'APPROVAL_RULE', entityId: ruleId,
+        beforeData: { requestType: existing.requestType, sequence: existing.sequence, currencyCode: existing.currencyCode,
+          minAmount: existing.minAmount.toString(), maxAmount: existing.maxAmount?.toString() ?? null,
+          approverRoleCode: existing.approverRoleCode, approverUserId: existing.approverUserId, isActive: existing.isActive },
+        afterData: { requestType: updated.requestType, sequence: updated.sequence, currencyCode: updated.currencyCode,
+          minAmount: updated.minAmount.toString(), maxAmount: updated.maxAmount?.toString() ?? null,
+          approverRoleCode: updated.approverRoleCode, approverUserId: updated.approverUserId, isActive: updated.isActive }
+      }});
+      return updated;
+    });
+  }
+
   async listApprovalRules(companyId: string) {
     return this.prisma.approvalRule.findMany({ where: { isActive: true, OR: [{ companyId }, { companyId: null }] },
       orderBy: [{ requestType: 'asc' }, { currencyCode: 'asc' }, { sequence: 'asc' }] });
