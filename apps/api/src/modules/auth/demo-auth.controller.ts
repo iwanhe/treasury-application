@@ -2,6 +2,7 @@ import { Body, Controller, ForbiddenException, Post, ServiceUnavailableException
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
 import { SignJWT } from 'jose';
+import { timingSafeEqual } from 'node:crypto';
 
 const DEMO_IDENTITIES: Record<string, { externalId: string; label: string }> = {
   admin: { externalId: 'd1111111-1111-4111-8111-111111111111', label: 'Treasury Admin' },
@@ -14,15 +15,21 @@ export class DemoAuthController {
   constructor(private readonly config: ConfigService, private readonly prisma: PrismaService) {}
 
   @Post('demo')
-  async createDemoSession(@Body() body: { identity?: string }) {
+  async createDemoSession(@Body() body: { identity?: string; accessCode?: string }) {
     if (this.config.get('DEMO_AUTH_ENABLED') !== 'true') {
       throw new ServiceUnavailableException('Demo authentication is disabled.');
     }
     const secretValue = this.config.get<string>('DEMO_TOKEN_SECRET');
-    if (!secretValue || secretValue.length < 32) {
+    const accessCode = this.config.get<string>('DEMO_ACCESS_CODE');
+    if (!secretValue || secretValue.length < 32 || !accessCode || accessCode.length < 12) {
       throw new ServiceUnavailableException('Demo authentication is not securely configured.');
     }
-    if (typeof body?.identity !== 'string' || !(body.identity in DEMO_IDENTITIES)) {
+    const suppliedCode = typeof body?.accessCode === 'string' ? Buffer.from(body.accessCode) : Buffer.alloc(0);
+    const expectedCode = Buffer.from(accessCode);
+    if (suppliedCode.length !== expectedCode.length || !timingSafeEqual(suppliedCode, expectedCode)) {
+      throw new ForbiddenException('Invalid demo access code.');
+    }
+    if (typeof body?.identity !== 'string' || !Object.hasOwn(DEMO_IDENTITIES, body.identity)) {
       throw new ForbiddenException('Demo identity is not allowed.');
     }
     const identity = DEMO_IDENTITIES[body.identity];
