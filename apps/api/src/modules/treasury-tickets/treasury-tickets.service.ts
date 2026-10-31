@@ -168,7 +168,7 @@ export class TreasuryTicketsService {
       });
       if (!existing) throw new NotFoundException('Ticket not found.');
       if (existing.requesterId !== actorId) throw new ForbiddenException('Only the requester can cancel this ticket.');
-      if (![TicketStatus.DRAFT, TicketStatus.SUBMITTED].includes(existing.status)) {
+      if (existing.status !== TicketStatus.DRAFT && existing.status !== TicketStatus.SUBMITTED) {
         throw new BadRequestException('Only draft or submitted tickets can be cancelled.');
       }
       const ticket = await tx.treasuryTicket.update({
