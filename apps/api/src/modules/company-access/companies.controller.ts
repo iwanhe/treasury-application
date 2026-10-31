@@ -38,9 +38,10 @@ export class CompaniesController {
   @RequireCompanyRoles('ADMIN')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   provisionCompanyUser(
+    @CurrentUser() user: AuthenticatedPrincipal,
     @Param('companyId') companyId: string,
     @Body() dto: ProvisionCompanyUserDto
   ) {
-    return this.companyAccess.provisionCompanyUser(companyId, dto);
+    return this.companyAccess.provisionCompanyUser(user.userId, companyId, dto);
   }
 }
