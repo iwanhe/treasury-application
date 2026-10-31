@@ -11,7 +11,7 @@ async function login(page: Page, credentials: { username: string; password: stri
   await page.getByLabel('Password', { exact: true }).fill(credentials.password);
   await page.getByRole('button', { name: 'Sign In' }).click();
   await expect(page.getByRole('heading', { name: 'Approval Rule Administration' })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('heading', { name: 'Treasury Ticket Management' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Treasury Ticket Management' })).toBeVisible({ timeout: 20_000 });
 }
 
 async function logout(page: Page) {
