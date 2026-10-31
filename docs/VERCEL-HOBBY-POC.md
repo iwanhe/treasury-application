@@ -29,8 +29,8 @@ The SPA rewrite is provided by `apps/web/vercel.json`.
 ## API project
 
 - Framework preset: Other (not the NestJS preset; the function entrypoint is `api/index.ts`)
-- Build command: `pnpm --filter @treasury/api prisma:generate && pnpm --filter @treasury/api build && mkdir -p public`
-- Output directory: `public` (kept empty so no source files are served statically)
+- Build command: `pnpm --filter @treasury/api prisma:generate && pnpm --filter @treasury/api build && mkdir -p public && printf ... > public/robots.txt` (see `apps/api/vercel.json`)
+- Output directory: `public` (holds only a disallow-all `robots.txt`, so no source files are served statically)
 - Install command: `pnpm install --frozen-lockfile`
 - Function region: `sin1` (same region as the Neon database)
 - All paths are rewritten to the `api/index.ts` function by `apps/api/vercel.json`
@@ -38,7 +38,7 @@ The SPA rewrite is provided by `apps/web/vercel.json`.
 - Environment variables:
   - `DATABASE_URL`: Neon pooled connection string for the `treasury` database (not `neondb`)
   - `DIRECT_URL`: Neon direct connection string; never expose it to the browser
-  - `WEB_ORIGIN`: exact web deployment origin, not a wildcard
+  - `WEB_ORIGIN`: exact web origin(s), comma-separated, not a wildcard (e.g. both `https://treasury-web.vercel.app` and the team-scoped alias)
   - `DEMO_AUTH_ENABLED=true`: explicitly enables demo login
   - `DEMO_TOKEN_SECRET`: random secret of at least 32 characters, unique to this environment
   - `DEMO_ACCESS_CODE`: shared access code of at least 24 characters (prefer 32+ random characters); provide it only to the intended demo user

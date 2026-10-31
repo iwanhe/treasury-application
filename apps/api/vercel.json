@@ -2,10 +2,13 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @treasury/api prisma:generate && pnpm --filter @treasury/api build && mkdir -p public",
+  "buildCommand": "pnpm --filter @treasury/api prisma:generate && pnpm --filter @treasury/api build && mkdir -p public && printf 'User-agent: *\\nDisallow: /\\n' > public/robots.txt",
   "outputDirectory": "public",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api" }
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
   ],
   "functions": {
     "api/index.ts": {
