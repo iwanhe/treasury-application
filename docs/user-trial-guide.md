@@ -109,3 +109,26 @@ All three users have access to Demo Company A and Demo Company B. Demo data is s
 - **CORS error:** confirm `WEB_ORIGIN=http://localhost:5173` in `apps/api/.env` and restart the API.
 - **Keycloak issuer/JWKS error:** keep the local issuer and JWKS URLs exactly as shown in `apps/api/.env.example`; do not mix `localhost` with the Docker service hostname in the local host-run API setup.
 - **Port already in use:** stop the process using 3000, 5173, 5432, or 8080, or adjust the local configuration consistently.
+
+
+## 7. Automated browser E2E tests
+
+The repository includes Playwright browser coverage for the main approval lifecycle. CI starts a disposable PostgreSQL database and imported Keycloak realm, applies the demo seed, resets the three demo passwords to non-temporary values inside that disposable realm, starts the API and Vite app, then runs Chromium.
+
+Run locally after starting PostgreSQL, Keycloak, applying migrations, and seeding the database:
+
+```bash
+pnpm --filter @treasury/web exec playwright install chromium
+pnpm --filter @treasury/web test:e2e
+```
+
+The browser test uses the three demo accounts and verifies:
+- Maker creates and submits two IDR tickets.
+- Checker approves one ticket and returns the other.
+- Maker edits the returned ticket and resubmits it.
+- Checker and Admin complete the sequential approval.
+- The final ticket status and approval history are visible.
+
+The E2E test is destructive to the demo workflow data (it creates tickets). Use a disposable database and Keycloak realm, not shared or production data. CI resets demo passwords only in its isolated Keycloak container; the local realm continues to require the password change configured by the realm import.
+
+Playwright reports and traces are uploaded by CI when the browser test job fails.
