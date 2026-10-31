@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -54,18 +55,35 @@ export class TreasuryTicketsService {
     });
   }
 
-  async list(companyId: string, query: ListTicketsDto) {
+  private async canViewAllCompanyTickets(userId: string, companyId: string) {
+    const elevated = await this.prisma.userCompanyRole.findFirst({
+      where: {
+        userId, companyId,
+        role: { code: { in: ['TREASURY_MAKER', 'TREASURY_CHECKER', 'APPROVER', 'ADMIN'] } }
+      },
+      select: { id: true }
+    });
+    return Boolean(elevated);
+  }
+
+  async list(actorId: string, companyId: string, query: ListTicketsDto) {
+    const canViewAll = await this.canViewAllCompanyTickets(actorId, companyId);
     return this.prisma.treasuryTicket.findMany({
-      where: { companyId, ...(query.status ? { status: query.status } : {}) },
+      where: {
+        companyId,
+        ...(!canViewAll ? { requesterId: actorId } : {}),
+        ...(query.status ? { status: query.status } : {})
+      },
       select: ticketSelect,
       orderBy: { createdAt: 'desc' },
       take: query.limit ?? 20
     });
   }
 
-  async get(companyId: string, ticketId: string) {
+  async get(actorId: string, companyId: string, ticketId: string) {
+    const canViewAll = await this.canViewAllCompanyTickets(actorId, companyId);
     const ticket = await this.prisma.treasuryTicket.findFirst({
-      where: { id: ticketId, companyId },
+      where: { id: ticketId, companyId, ...(!canViewAll ? { requesterId: actorId } : {}) },
       select: {
         ...ticketSelect,
         approvals: {
@@ -89,16 +107,16 @@ export class TreasuryTicketsService {
         select: { id: true, ticketNo: true, requesterId: true, status: true, title: true, description: true, type: true, priority: true }
       });
       if (!existing) throw new NotFoundException('Ticket not found.');
-      if (existing.requesterId !== actorId) throw new BadRequestException('Only the requester can edit this ticket.');
+      if (existing.requesterId !== actorId) throw new ForbiddenException('Only the requester can edit this ticket.');
       if (existing.status !== TicketStatus.DRAFT) throw new BadRequestException('Only draft tickets can be edited.');
 
       const ticket = await tx.treasuryTicket.update({
         where: { id: ticketId },
         data: {
-          ...(dto.type !== undefined ? { type: dto.type } : {}),
-          ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
-          ...(dto.description !== undefined ? { description: dto.description.trim() } : {}),
-          ...(dto.priority !== undefined ? { priority: dto.priority } : {})
+          ...(dto.type != null ? { type: dto.type } : {}),
+          ...(dto.title != null ? { title: dto.title.trim() } : {}),
+          ...(dto.description != null ? { description: dto.description.trim() } : {}),
+          ...(dto.priority != null ? { priority: dto.priority } : {})
         },
         select: ticketSelect
       });
@@ -121,7 +139,7 @@ export class TreasuryTicketsService {
         select: { id: true, ticketNo: true, requesterId: true, status: true, company: { select: { code: true } } }
       });
       if (!existing) throw new NotFoundException('Ticket not found.');
-      if (existing.requesterId !== actorId) throw new BadRequestException('Only the requester can submit this ticket.');
+      if (existing.requesterId !== actorId) throw new ForbiddenException('Only the requester can submit this ticket.');
       if (existing.status !== TicketStatus.DRAFT) throw new BadRequestException('Only draft tickets can be submitted.');
 
       const ticket = await tx.treasuryTicket.update({
@@ -149,7 +167,7 @@ export class TreasuryTicketsService {
         select: { id: true, requesterId: true, status: true, company: { select: { code: true } } }
       });
       if (!existing) throw new NotFoundException('Ticket not found.');
-      if (existing.requesterId !== actorId) throw new BadRequestException('Only the requester can cancel this ticket.');
+      if (existing.requesterId !== actorId) throw new ForbiddenException('Only the requester can cancel this ticket.');
       if (![TicketStatus.DRAFT, TicketStatus.SUBMITTED].includes(existing.status)) {
         throw new BadRequestException('Only draft or submitted tickets can be cancelled.');
       }
