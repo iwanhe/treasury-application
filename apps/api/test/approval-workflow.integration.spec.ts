@@ -25,7 +25,7 @@ async function fixture(): Promise<Fixture> {
     { userId: users[2].id, companyId: company.id, roleId: roleByCode.get('APPROVER')! }
   ]});
   return { companyId: company.id, otherCompanyId: other.id, requesterId: users[0].id,
-    approverId: users[1].id, secondApproverId: users[2].id, companyCode: company.code };
+    approverId: users[1].id, secondApproverId: users[2].id, companyCode: company.code, globalRuleIds: [] };
 }
 async function cleanup(f: Fixture) {
   await prisma.auditLog.deleteMany({ where: { companyCode: { in: [f.companyCode] } } });
@@ -44,9 +44,11 @@ async function addRule(f: Fixture, sequence: number, roleCode = 'APPROVER', minA
   return prisma.approvalRule.create({ data: { companyId: f.companyId, requestType: RequestType.FINANCIAL_INVESTMENT,
     sequence, currencyCode: 'IDR', minAmount, maxAmount, approverRoleCode: roleCode } });
 }
-async function addGlobalRule(sequence: number, roleCode = 'APPROVER', minAmount = '0') {
-  return prisma.approvalRule.create({ data: { companyId: null, requestType: RequestType.FINANCIAL_INVESTMENT,
+async function addGlobalRule(f: Fixture, sequence: number, roleCode = 'APPROVER', minAmount = '0') {
+  const rule = await prisma.approvalRule.create({ data: { companyId: null, requestType: RequestType.FINANCIAL_INVESTMENT,
     sequence, currencyCode: 'IDR', minAmount, approverRoleCode: roleCode } });
+  f.globalRuleIds.push(rule.id);
+  return rule;
 }
 async function createAndSubmit(f: Fixture, amount = '1000000') {
   const ticket = await service.create(f.requesterId, f.companyId, {
@@ -105,8 +107,8 @@ describe('conditional approval workflow integration', () => {
     try {
       await addRule(f, 1, 'APPROVER');
       await addRule(f, 2, 'TREASURY_CHECKER');
-      await prisma.userCompanyRole.create({ data: { userId: f.approverId, companyId: f.companyId,
-        role: { connect: { code: 'TREASURY_CHECKER' } } } });
+      const checkerRole = await prisma.role.findUniqueOrThrow({ where: { code: 'TREASURY_CHECKER' } });
+      await prisma.userCompanyRole.create({ data: { userId: f.approverId, companyId: f.companyId, roleId: checkerRole.id } });
       const ticket = await createAndSubmit(f);
       const steps = await approvals(ticket.id);
       await assert.rejects(() => service.decideApproval(f.approverId, f.companyId, ticket.id, steps[1].id,
@@ -132,6 +134,23 @@ describe('conditional approval workflow integration', () => {
       const history = await approvals(ticket.id);
       assert.equal(history[1].decision, 'CANCELLED');
       assert.equal(await prisma.auditLog.count({ where: { ticketId: ticket.id, action: 'RETURN' } }), 1);
+    } finally { await cleanup(f); }
+  });
+
+  it('rejects a ticket and cancels all later approval steps', async () => {
+    const f = await fixture();
+    try {
+      await addRule(f, 1, 'APPROVER');
+      await addRule(f, 2, 'TREASURY_CHECKER');
+      const ticket = await createAndSubmit(f);
+      const steps = await approvals(ticket.id);
+      await service.decideApproval(f.approverId, f.companyId, ticket.id, steps[0].id,
+        { decision: 'REJECTED', comments: 'Investment rejected' });
+      assert.equal((await prisma.treasuryTicket.findUniqueOrThrow({ where: { id: ticket.id } })).status, 'REJECTED');
+      const history = await approvals(ticket.id);
+      assert.equal(history[0].decision, 'REJECTED');
+      assert.equal(history[1].decision, 'CANCELLED');
+      assert.equal(await prisma.auditLog.count({ where: { ticketId: ticket.id, action: 'REJECT' } }), 1);
     } finally { await cleanup(f); }
   });
 
