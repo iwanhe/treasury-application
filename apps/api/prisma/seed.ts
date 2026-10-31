@@ -46,20 +46,19 @@ async function main() {
     }
   }
 
-  const checkerId = users.get('treasury.checker@example.local');
-  const adminId = users.get('treasury.admin@example.local');
-  if (!checkerId || !adminId) throw new Error('Demo approvers were not provisioned.');
   for (const company of companyRows) for (const requestType of Object.values(RequestType)) {
     const definitions = [
       { sequence: 1, approverRoleCode: 'TREASURY_CHECKER', approverUserId: null },
       { sequence: 2, approverRoleCode: 'APPROVER', approverUserId: null }
     ];
     for (const rule of definitions) {
-      await prisma.approvalRule.upsert({
-        where: { id: `00000000-0000-4000-8000-${company.code.endsWith('A') ? '00000000000' : '00000000001'}${String(Object.values(RequestType).indexOf(requestType)).padStart(2,'0')}${rule.sequence}` },
-        update: { isActive: true, companyId: company.id, requestType, sequence: rule.sequence, currencyCode: 'IDR', minAmount: new Prisma.Decimal(0), maxAmount: null, approverRoleCode: rule.approverRoleCode, approverUserId: null },
-        create: { companyId: company.id, requestType, sequence: rule.sequence, currencyCode: 'IDR', minAmount: new Prisma.Decimal(0), approverRoleCode: rule.approverRoleCode }
+      const existingRule = await prisma.approvalRule.findFirst({
+        where: { companyId: company.id, requestType, sequence: rule.sequence, currencyCode: 'IDR' }
       });
+      const ruleData = { companyId: company.id, requestType, sequence: rule.sequence, currencyCode: 'IDR',
+        minAmount: new Prisma.Decimal(0), maxAmount: null, approverRoleCode: rule.approverRoleCode, approverUserId: null, isActive: true };
+      if (existingRule) await prisma.approvalRule.update({ where: { id: existingRule.id }, data: ruleData });
+      else await prisma.approvalRule.create({ data: ruleData });
     }
   }
   console.log('Demo seed complete: 2 companies, 3 identities, company roles, and two-step IDR approval rules for every request type.');
