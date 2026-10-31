@@ -6,7 +6,7 @@ import { TreasuryTicketsService } from '../src/modules/treasury-tickets/treasury
 
 const prisma = new PrismaClient();
 const service = new TreasuryTicketsService(prisma as never);
-type Fixture = { companyId: string; otherCompanyId: string; requesterId: string; approverId: string; secondApproverId: string; companyCode: string };
+type Fixture = { companyId: string; otherCompanyId: string; requesterId: string; approverId: string; secondApproverId: string; companyCode: string; globalRuleIds: string[] };
 const roleCodes = ['REQUESTER', 'APPROVER', 'TREASURY_CHECKER', 'ADMIN'];
 
 async function fixture(): Promise<Fixture> {
@@ -34,7 +34,7 @@ async function cleanup(f: Fixture) {
   await prisma.ticketApproval.deleteMany({ where: { ticketId: { in: ids } } });
   await prisma.ticketAttachment.deleteMany({ where: { ticketId: { in: ids } } });
   await prisma.treasuryTicket.deleteMany({ where: { id: { in: ids } } });
-  await prisma.approvalRule.deleteMany({ where: { companyId: f.companyId } });
+  await prisma.approvalRule.deleteMany({ where: { OR: [{ companyId: f.companyId }, { id: { in: f.globalRuleIds } }] } });\n  await prisma.ticketCounter.deleteMany({ where: { companyId: f.companyId } });
   await prisma.userCompanyRole.deleteMany({ where: { companyId: { in: [f.companyId, f.otherCompanyId] } } });
   await prisma.company.deleteMany({ where: { id: { in: [f.companyId, f.otherCompanyId] } } });
   await prisma.user.deleteMany({ where: { id: { in: [f.requesterId, f.approverId, f.secondApproverId] } } });
@@ -66,7 +66,7 @@ describe('conditional approval workflow integration', () => {
   it('selects company rules ahead of global rules and matches amount boundaries', async () => {
     const f = await fixture();
     try {
-      await addGlobalRule(1, 'TREASURY_CHECKER');
+      await addGlobalRule(f, 1, 'TREASURY_CHECKER');
       await addRule(f, 1, 'APPROVER', '1000000', '2000000');
       const ticket = await createAndSubmit(f, '2000000.00');
       const steps = await approvals(ticket.id);
@@ -78,7 +78,7 @@ describe('conditional approval workflow integration', () => {
   it('uses a global rule only when no company-specific amount rule matches', async () => {
     const f = await fixture();
     try {
-      await addGlobalRule(1);
+      await addGlobalRule(f, 1);
       await addRule(f, 1, 'TREASURY_CHECKER', '5000000');
       const ticket = await createAndSubmit(f, '1000000');
       const steps = await approvals(ticket.id);
