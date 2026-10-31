@@ -279,10 +279,22 @@ export class TreasuryTicketsService {
   async pendingApprovals(actorId: string, companyId: string) {
     const memberships = await this.prisma.userCompanyRole.findMany({ where: { userId: actorId, companyId },
       select: { role: { select: { code: true } } } });
-    const roles = memberships.map(m => m.role.code);
-    return this.prisma.ticketApproval.findMany({ where: { decision: ApprovalDecision.PENDING,
-      ticket: { companyId, status: TicketStatus.IN_REVIEW, requesterId: { not: actorId } },
-      OR: [{ approverId: actorId }, ...(roles.length ? [{ roleCode: { in: roles } }] : [])] },
-      include: { ticket: { select: ticketSelect } }, orderBy: [{ sequence: 'asc' }, { createdAt: 'asc' }] });
+    const roles = new Set(memberships.map(m => m.role.code));
+    const pending = await this.prisma.ticketApproval.findMany({
+      where: { decision: ApprovalDecision.PENDING,
+        ticket: { companyId, status: TicketStatus.IN_REVIEW, requesterId: { not: actorId } } },
+      include: { ticket: { select: ticketSelect } },
+      orderBy: [{ ticketId: 'asc' }, { sequence: 'asc' }, { createdAt: 'asc' }]
+    });
+
+    // Only the earliest pending step of each ticket is actionable. Do not expose
+    // later steps to a role member while an earlier named/other-role approver acts.
+    const firstPendingByTicket = new Map<string, typeof pending[number]>();
+    for (const approval of pending) {
+      if (!firstPendingByTicket.has(approval.ticketId)) firstPendingByTicket.set(approval.ticketId, approval);
+    }
+    return [...firstPendingByTicket.values()].filter(approval =>
+      approval.approverId === actorId || (!approval.approverId && approval.roleCode !== null && roles.has(approval.roleCode))
+    );
   }
 }
