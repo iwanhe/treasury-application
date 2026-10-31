@@ -91,10 +91,10 @@ export class CompanyAccessService {
     }));
   }
 
-  async provisionCompanyUser(companyId: string, dto: ProvisionCompanyUserDto) {
+  async provisionCompanyUser(actorId: string, companyId: string, dto: ProvisionCompanyUserDto) {
     const company = await this.prisma.company.findFirst({
       where: { id: companyId, status: 'ACTIVE' },
-      select: { id: true }
+      select: { id: true, code: true }
     });
     if (!company) throw new NotFoundException('Company not found.');
 
@@ -148,6 +148,21 @@ export class CompanyAccessService {
           create: { userId: user.id, companyId, roleId: role.id }
         });
       }
+
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          companyCode: company.code,
+          action: 'CREATE',
+          entityType: 'USER_COMPANY_ROLE',
+          entityId: user.id,
+          afterData: {
+            email: user.email,
+            externalId: user.externalId,
+            roles: roles.map(role => role.code).sort()
+          }
+        }
+      });
 
       return {
         ...user,
