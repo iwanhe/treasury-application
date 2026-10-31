@@ -128,6 +128,25 @@ export class TreasuryTicketsService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
+
+  async cancel(actorId: string, companyId: string, ticketId: string) {
+    return this.prisma.$transaction(async tx => {
+      const existing = await tx.treasuryTicket.findFirst({ where: { id: ticketId, companyId },
+        select: { id: true, requesterId: true, status: true, company: { select: { code: true } } } });
+      if (!existing) throw new NotFoundException('Ticket not found.');
+      if (existing.requesterId !== actorId) throw new ForbiddenException('Only the requester can cancel this ticket.');
+      if (existing.status !== TicketStatus.DRAFT && existing.status !== TicketStatus.SUBMITTED) {
+        throw new BadRequestException('Only draft or submitted tickets can be cancelled.');
+      }
+      const ticket = await tx.treasuryTicket.update({ where: { id: ticketId },
+        data: { status: TicketStatus.CANCELLED }, select: ticketSelect });
+      await tx.auditLog.create({ data: { actorId, ticketId, companyCode: existing.company.code,
+        action: AuditAction.CANCEL, entityType: 'TREASURY_TICKET', entityId: ticketId,
+        beforeData: { status: existing.status }, afterData: { status: ticket.status } } });
+      return ticket;
+    });
+  }
+
   async createApprovalRule(actorId: string, companyId: string, dto: CreateApprovalRuleDto) {
     const min = new Prisma.Decimal(dto.minAmount);
     const max = dto.maxAmount ? new Prisma.Decimal(dto.maxAmount) : null;
