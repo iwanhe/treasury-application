@@ -60,13 +60,13 @@ test('Maker → Checker → Admin approval and return/edit/resubmit lifecycle', 
   const firstApproval = approvalInbox.getByRole('row').filter({ hasText: approvalTitle });
   await expect(firstApproval).toBeVisible();
   await firstApproval.getByRole('button', { name: 'Approve' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Setujui' }).click();
   await expect(firstApproval).toHaveCount(0);
 
   const returnApproval = approvalInbox.getByRole('row').filter({ hasText: returnTitle });
   await expect(returnApproval).toBeVisible();
   await returnApproval.getByRole('button', { name: 'Return' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Return' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Kembalikan' }).click();
   await expect(returnApproval).toHaveCount(0);
   await logout(page);
 
@@ -88,7 +88,7 @@ test('Maker → Checker → Admin approval and return/edit/resubmit lifecycle', 
     .getByRole('row').filter({ hasText: `${returnTitle} revised` });
   await expect(revisedApproval).toBeVisible();
   await revisedApproval.getByRole('button', { name: 'Approve' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Setujui' }).click();
   await logout(page);
 
   await login(page, admin);
@@ -96,7 +96,7 @@ test('Maker → Checker → Admin approval and return/edit/resubmit lifecycle', 
     .getByRole('row').filter({ hasText: `${returnTitle} revised` });
   await expect(finalApproval).toBeVisible();
   await finalApproval.getByRole('button', { name: 'Approve' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Setujui' }).click();
 
   const finalRow = page.getByRole('row').filter({ hasText: `${returnTitle} revised` });
   await expect(finalRow.getByText('APPROVED')).toBeVisible();
