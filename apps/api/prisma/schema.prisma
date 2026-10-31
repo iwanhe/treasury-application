@@ -46,6 +46,7 @@ enum ApprovalDecision {
   APPROVED
   REJECTED
   RETURNED
+  CANCELLED
 }
 enum AuditAction {
   CREATE
@@ -170,6 +171,7 @@ model ApprovalRule {
 model TicketApproval {
   id String @id @default(uuid()) @db.Uuid
   ticketId String @db.Uuid
+  cycle Int @default(1)
   sequence Int
   approverId String? @db.Uuid
   roleCode String? @db.VarChar(50)
@@ -179,8 +181,9 @@ model TicketApproval {
   ticket TreasuryTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   approver User? @relation(fields: [approverId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
-  @@unique([ticketId, sequence])
+  @@unique([ticketId, cycle, sequence])
   @@index([approverId, decision])
+  @@index([ticketId, cycle, decision])
 }
 model TicketAttachment {
   id String @id @default(uuid()) @db.Uuid
