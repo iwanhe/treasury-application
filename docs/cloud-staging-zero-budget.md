@@ -62,6 +62,20 @@ Install Docker Engine + Compose plugin. Deploy API and Keycloak as containers bo
 
 Caddy obtains and renews TLS certificates automatically after DNS points to the VM and ports 80/443 are reachable. Keep SSH restricted. Enable unattended security updates and reboot planning.
 
+The repository includes `apps/api/Dockerfile`, `deploy/staging/docker-compose.yml`, `deploy/staging/Caddyfile`, and `deploy/staging/.env.example`. On the VM:
+1. Clone the repository and check out the approved staging commit.
+2. Copy `deploy/staging/.env.example` to `deploy/staging/.env`; replace every placeholder and run `chmod 600 deploy/staging/.env`.
+3. Start the services from the repository root:
+   `docker compose --env-file deploy/staging/.env -f deploy/staging/docker-compose.yml up -d --build`
+4. Check `docker compose --env-file deploy/staging/.env -f deploy/staging/docker-compose.yml ps` and inspect logs if needed.
+5. Import `docker/keycloak/treasury-dev-realm.json` through the Keycloak Admin Console, then apply the redirect URI, web origin, and audience settings below.
+6. Apply the Prisma migration and seed only after verifying the staging database URL:
+   `docker compose --env-file deploy/staging/.env -f deploy/staging/docker-compose.yml exec api pnpm prisma:deploy`
+   `docker compose --env-file deploy/staging/.env -f deploy/staging/docker-compose.yml exec api pnpm prisma:seed`
+7. Verify the API at `https://api.<your-domain>/api/health` and the realm discovery document at `https://auth.<your-domain>/realms/treasury-dev/.well-known/openid-configuration`.
+
+The API image currently includes build-time dependencies so that Prisma CLI and the checked-in demo seed remain available for controlled staging operations. This is acceptable for a temporary demo but should be slimmed down before production.
+
 Keycloak production-like start options:
 - `KC_DB=postgres`
 - `KC_DB_URL=jdbc:postgresql://<neon-host>:5432/<keycloak-db>?sslmode=require`
