@@ -9,7 +9,7 @@ Create two Vercel projects from this repository and pin both to `feature/vercel-
 - Web project Root Directory: `apps/web`
 - API project Root Directory: `apps/api`
 - Enable access to source files outside the root directory where Vercel offers that setting, because this is a pnpm workspace.
-- Use the pnpm package manager. There is currently no committed pnpm lockfile, so use `pnpm install --no-frozen-lockfile` until a lockfile is generated and committed.
+- Use the pnpm package manager. The CI workflow generates and commits `pnpm-lock.yaml` on this branch. Once it exists, installs must use `pnpm install --frozen-lockfile`.
 
 The API connects to the existing Neon PostgreSQL database. Runtime uses the pooled connection string. Keep the direct connection string only for controlled Prisma CLI migration work.
 
@@ -18,7 +18,7 @@ The API connects to the existing Neon PostgreSQL database. Runtime uses the pool
 - Framework preset: Vite
 - Build command: `pnpm --filter @treasury/web build`
 - Output directory: `dist`
-- Install command: `pnpm install --no-frozen-lockfile`
+- Install command: `pnpm install --frozen-lockfile`
 - Environment variables:
   - `VITE_API_BASE_URL`: deployed API URL including `/api`, e.g. `https://<api-project>.vercel.app/api`
   - `VITE_AUTH_MODE=demo`: enable the personal demo sign-in screen
