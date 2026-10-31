@@ -6,13 +6,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum CompanyStatus { ACTIVE INACTIVE }
-enum UserStatus { ACTIVE INACTIVE LOCKED }
-enum TicketStatus { DRAFT SUBMITTED IN_REVIEW APPROVED REJECTED RETURNED IN_PROGRESS COMPLETED CANCELLED }
-enum TicketPriority { LOW NORMAL HIGH URGENT }
-enum RequestType { BANK_ACCOUNT_OPEN BANK_ACCOUNT_CLOSE INTERNET_BANKING FINANCIAL_INVESTMENT FX_DEAL FUNDING_LOAN FACILITY_EXTENSION OTHER }
-enum ApprovalDecision { PENDING APPROVED REJECTED RETURNED }
-enum AuditAction { CREATE UPDATE SUBMIT APPROVE REJECT RETURN CANCEL LOGIN LOGOUT EXPORT UPLOAD }
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+}
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
+enum TicketStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+enum RequestType {
+  BANK_ACCOUNT_OPEN
+  BANK_ACCOUNT_CLOSE
+  INTERNET_BANKING
+  FINANCIAL_INVESTMENT
+  FX_DEAL
+  FUNDING_LOAN
+  FACILITY_EXTENSION
+  OTHER
+}
+enum ApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+}
+enum AuditAction {
+  CREATE
+  UPDATE
+  SUBMIT
+  APPROVE
+  REJECT
+  RETURN
+  CANCEL
+  LOGIN
+  LOGOUT
+  EXPORT
+  UPLOAD
+}
 
 model Company {
   id          String @id @default(uuid()) @db.Uuid
@@ -28,18 +76,18 @@ model Company {
 }
 
 model User {
-  id           String @id @default(uuid()) @db.Uuid
-  email        String @unique @db.VarChar(254)
-  fullName     String @db.VarChar(160)
-  status       UserStatus @default(ACTIVE)
-  externalId   String? @unique @db.VarChar(160)
-  memberships  UserCompanyRole[]
-  requested    TreasuryTicket[] @relation("TicketRequester")
-  assigned     TreasuryTicket[] @relation("TicketAssignee")
+  id            String @id @default(uuid()) @db.Uuid
+  email         String @unique @db.VarChar(254)
+  fullName      String @db.VarChar(160)
+  status        UserStatus @default(ACTIVE)
+  externalId    String? @unique @db.VarChar(160)
+  memberships   UserCompanyRole[]
+  requested     TreasuryTicket[] @relation("TicketRequester")
+  assigned      TreasuryTicket[] @relation("TicketAssignee")
   approvalTasks TicketApproval[]
-  auditEvents  AuditLog[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  auditEvents   AuditLog[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Role {
@@ -94,29 +142,29 @@ model TreasuryTicket {
 }
 
 model ApprovalRule {
-  id          String @id @default(uuid()) @db.Uuid
-  companyId   String? @db.Uuid
-  requestType RequestType
-  sequence    Int
+  id               String @id @default(uuid()) @db.Uuid
+  companyId        String? @db.Uuid
+  requestType      RequestType
+  sequence         Int
   approverRoleCode String @db.VarChar(50)
-  isActive    Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive         Boolean @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
   @@index([companyId, requestType, isActive, sequence])
 }
 
 model TicketApproval {
-  id          String @id @default(uuid()) @db.Uuid
-  ticketId    String @db.Uuid
-  sequence    Int
-  approverId  String? @db.Uuid
-  roleCode    String @db.VarChar(50)
-  decision    ApprovalDecision @default(PENDING)
-  comments    String? @db.Text
-  decidedAt   DateTime?
-  ticket      TreasuryTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  approver    User? @relation(fields: [approverId], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
+  id         String @id @default(uuid()) @db.Uuid
+  ticketId   String @db.Uuid
+  sequence   Int
+  approverId String? @db.Uuid
+  roleCode   String @db.VarChar(50)
+  decision   ApprovalDecision @default(PENDING)
+  comments   String? @db.Text
+  decidedAt  DateTime?
+  ticket     TreasuryTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  approver   User? @relation(fields: [approverId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
   @@unique([ticketId, sequence])
   @@index([approverId, decision])
 }
