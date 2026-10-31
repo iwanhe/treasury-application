@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Matches, Max, Min, ValidateIf } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsUUID, Matches, Max, Min, ValidateIf } from 'class-validator';
 import { RequestType } from '@prisma/client';
 
 export class UpdateApprovalRuleDto {
@@ -9,5 +9,5 @@ export class UpdateApprovalRuleDto {
   @IsOptional() @Matches(/^\d{1,16}(\.\d{1,2})?$/) maxAmount?: string | null;
   @IsOptional() @IsBoolean() isActive?: boolean;
   @IsOptional() @IsString() approverRoleCode?: string | null;
-  @IsOptional() @IsString() approverUserId?: string | null;
+  @IsOptional() @IsUUID() approverUserId?: string | null;
 }
