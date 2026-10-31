@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: treasury
+      POSTGRES_PASSWORD: treasury_dev
+      POSTGRES_DB: treasury
+    ports: ["5432:5432"]
+    volumes: [treasury_pgdata:/var/lib/postgresql/data]
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+volumes:
+  treasury_pgdata:

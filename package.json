@@ -1,0 +1,13 @@
+{
+  "name": "treasury-application",
+  "private": true,
+  "packageManager": "pnpm@10.18.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @treasury/web dev",
+    "dev:api": "pnpm --filter @treasury/api start:dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "db:generate": "pnpm --filter @treasury/api prisma:generate",
+    "db:migrate": "pnpm --filter @treasury/api prisma:migrate"
+  }
+}
