@@ -164,7 +164,7 @@ export class TreasuryTicketsService {
         if (!role) throw new NotFoundException('Approver role does not exist.');
       } else {
         const userMembership = await tx.userCompanyRole.findFirst({ where: { companyId, userId: dto.approverUserId,
-          user: { status: 'ACTIVE' }, role: { code: { in: ['APPROVER', 'ADMIN'] } } }, select: { id: true } });
+          user: { status: 'ACTIVE' }, role: { code: { in: ['APPROVER', 'TREASURY_CHECKER', 'ADMIN'] } } }, select: { id: true } });
         if (!userMembership) throw new BadRequestException('Named approver must be an active APPROVER or ADMIN member of this company.');
       }
       const existing = await tx.approvalRule.findFirst({ where: { companyId, requestType: dto.requestType,
