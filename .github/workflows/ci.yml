@@ -23,6 +23,7 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://treasury:treasury_dev@localhost:5432/treasury?schema=public
+      DIRECT_URL: postgresql://treasury:treasury_dev@localhost:5432/treasury?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
