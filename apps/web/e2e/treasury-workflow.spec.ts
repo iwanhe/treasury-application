@@ -1,17 +1,29 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const maker = { username: 'treasury.maker', password: 'ChangeMe123!' };
-const checker = { username: 'treasury.checker', password: 'ChangeMe123!' };
-const admin = { username: 'treasury.admin', password: 'ChangeMe123!' };
+const credentials = (role: 'MAKER' | 'CHECKER' | 'ADMIN', username: string) => ({
+  username: process.env[`E2E_${role}_USERNAME`] ?? username,
+  password: process.env[`E2E_${role}_PASSWORD`] ?? 'ChangeMe123!',
+});
+const maker = credentials('MAKER', 'treasury.maker');
+const checker = credentials('CHECKER', 'treasury.checker');
+const admin = credentials('ADMIN', 'treasury.admin');
 
 async function login(page: Page, credentials: { username: string; password: string }) {
   page.on('pageerror', error => console.error('Browser page error:', error.message));
+  page.on('requestfailed', request => console.error('Browser request failed:', request.method(), request.url(), request.failure()?.errorText));
+  const companiesResponse = page.waitForResponse(response => response.url().includes('/companies/mine'), { timeout: 30_000 });
   await page.goto('/');
   await page.getByLabel('Username or email').fill(credentials.username);
   await page.getByLabel('Password', { exact: true }).fill(credentials.password);
   await page.getByRole('button', { name: 'Sign In' }).click();
-  await expect(page.getByRole('heading', { name: 'Approval Rule Administration' })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('heading', { name: 'Treasury Ticket Management' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Approval Rule Administration' })).toBeVisible({ timeout: 30_000 });
+  const response = await companiesResponse;
+  if (!response.ok()) {
+    throw new Error(`GET /companies/mine failed: HTTP ${response.status()} ${await response.text()}`);
+  }
+  const companies = await response.json() as unknown[];
+  expect(companies.length, 'Authenticated user must be assigned to at least one company').toBeGreaterThan(0);
+  await expect(page.getByRole('heading', { name: 'Treasury Ticket Management' })).toBeVisible({ timeout: 30_000 });
 }
 
 async function logout(page: Page) {
