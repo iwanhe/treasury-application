@@ -1,0 +1,47 @@
+name: Staging Playwright
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Deployed Netlify staging URL
+        required: true
+        type: string
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @treasury/web exec playwright install --with-deps chromium
+      - name: Run staging workflow
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+          E2E_MAKER_USERNAME: ${{ secrets.E2E_MAKER_USERNAME }}
+          E2E_MAKER_PASSWORD: ${{ secrets.E2E_MAKER_PASSWORD }}
+          E2E_CHECKER_USERNAME: ${{ secrets.E2E_CHECKER_USERNAME }}
+          E2E_CHECKER_PASSWORD: ${{ secrets.E2E_CHECKER_PASSWORD }}
+          E2E_ADMIN_USERNAME: ${{ secrets.E2E_ADMIN_USERNAME }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: pnpm --filter @treasury/web test:e2e
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

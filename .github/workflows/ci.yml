@@ -78,5 +78,60 @@ jobs:
               "http://localhost:8080/admin/realms/treasury-dev/users?username=$USERNAME&exact=true" | jq -r '.[0].id // empty')
             test "$ACTUAL_ID" = "$EXPECTED_ID" || { echo "Unexpected Keycloak subject for $USERNAME: $ACTUAL_ID"; exit 1; }
           done
+      - name: Set deterministic E2E passwords
+        run: |
+          TOKEN=$(curl -fsS -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'client_id=admin-cli' \
+            --data-urlencode 'username=admin' \
+            --data-urlencode 'password=admin' \
+            --data-urlencode 'grant_type=password' | jq -r '.access_token')
+          for USER_ID in \
+            d1111111-1111-4111-8111-111111111111 \
+            d2222222-2222-4222-8222-222222222222 \
+            d3333333-3333-4333-8333-333333333333; do
+            curl -fsS -X PUT "http://localhost:8080/admin/realms/treasury-dev/users/$USER_ID/reset-password" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H 'Content-Type: application/json' \
+              -d '{"type":"password","value":"ChangeMe123!","temporary":false}'
+          done
+      - name: Start API and web for browser tests
+        env:
+          NODE_ENV: test
+          API_PORT: 3000
+          WEB_ORIGIN: http://localhost:5173
+          OIDC_ISSUER: http://localhost:8080/realms/treasury-dev
+          OIDC_AUDIENCE: treasury-api
+          OIDC_JWKS_URI: http://localhost:8080/realms/treasury-dev/protocol/openid-connect/certs
+          VITE_API_BASE_URL: http://localhost:3000/api
+          VITE_OIDC_URL: http://localhost:8080
+          VITE_OIDC_REALM: treasury-dev
+          VITE_OIDC_CLIENT_ID: treasury-web
+        run: |
+          pnpm --filter @treasury/api start:prod > /tmp/treasury-api.log 2>&1 &
+          pnpm --filter @treasury/web dev -- --host 127.0.0.1 > /tmp/treasury-web.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health >/dev/null && curl -fsS http://localhost:5173 >/dev/null; then
+              echo "API and web are ready"; exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/treasury-api.log
+          cat /tmp/treasury-web.log
+          exit 1
+      - name: Install Playwright Chromium
+        run: pnpm --filter @treasury/web exec playwright install --with-deps chromium
+      - name: Run Playwright browser E2E
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
+        run: pnpm --filter @treasury/web test:e2e
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          if-no-files-found: ignore
       - name: Validate Docker Compose
         run: docker compose config --quiet

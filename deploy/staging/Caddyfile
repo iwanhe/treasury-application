@@ -1,0 +1,9 @@
+{$API_HOST} {
+  encode zstd gzip
+  reverse_proxy api:3000
+}
+
+{$AUTH_HOST} {
+  encode zstd gzip
+  reverse_proxy keycloak:8080
+}

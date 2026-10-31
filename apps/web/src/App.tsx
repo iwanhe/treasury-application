@@ -16,6 +16,18 @@ const oidc = new Keycloak({
   realm: import.meta.env.VITE_OIDC_REALM ?? 'treasury-dev',
   clientId: import.meta.env.VITE_OIDC_CLIENT_ID ?? 'treasury-web'
 });
+
+// React StrictMode mounts effects twice in development. Keycloak instances may only
+// be initialized once, so share the same initialization promise across both mounts.
+let oidcInitPromise: Promise<boolean> | undefined;
+function initializeOidc() {
+  oidcInitPromise ??= oidc.init({
+    onLoad: 'login-required',
+    pkceMethod: 'S256',
+    checkLoginIframe: false
+  });
+  return oidcInitPromise;
+}
 type RuleForm = {
   requestType: string; sequence: number; currencyCode: string; minAmount: string;
   maxAmount?: string; approverRoleCode?: string; approverUserId?: string;
@@ -37,13 +49,16 @@ export default function App() {
 
   useEffect(() => {
     let alive = true;
-    oidc.init({ onLoad: 'login-required', pkceMethod: 'S256', checkLoginIframe: false })
+    initializeOidc()
       .then(ok => {
         if (!alive) return;
         setAuthenticated(ok);
         setTokenProvider(() => oidc.token);
       })
-      .catch(() => { if (alive) setError('SSO tidak dapat dihubungi. Periksa konfigurasi Keycloak dan URL redirect client.'); })
+      .catch((cause: unknown) => {
+        console.error('Keycloak initialization failed:', cause);
+        if (alive) setError('SSO tidak dapat dihubungi. Periksa konfigurasi Keycloak dan URL redirect client.');
+      })
       .finally(() => { if (alive) setAuthReady(true); });
     const refresh = window.setInterval(() => {
       if (oidc.authenticated) oidc.updateToken(30).catch(() => oidc.login());
