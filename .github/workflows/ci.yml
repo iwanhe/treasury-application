@@ -99,11 +99,11 @@ jobs:
         env:
           NODE_ENV: test
           API_PORT: 3000
-          WEB_ORIGIN: http://127.0.0.1:5173
+          WEB_ORIGIN: http://localhost:5173
           OIDC_ISSUER: http://localhost:8080/realms/treasury-dev
           OIDC_AUDIENCE: treasury-api
           OIDC_JWKS_URI: http://localhost:8080/realms/treasury-dev/protocol/openid-connect/certs
-          VITE_API_BASE_URL: http://127.0.0.1:3000/api
+          VITE_API_BASE_URL: http://localhost:3000/api
           VITE_OIDC_URL: http://localhost:8080
           VITE_OIDC_REALM: treasury-dev
           VITE_OIDC_CLIENT_ID: treasury-web
@@ -111,7 +111,7 @@ jobs:
           pnpm --filter @treasury/api start:prod > /tmp/treasury-api.log 2>&1 &
           pnpm --filter @treasury/web dev -- --host 127.0.0.1 > /tmp/treasury-web.log 2>&1 &
           for attempt in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:3000/api/health >/dev/null && curl -fsS http://127.0.0.1:5173 >/dev/null; then
+            if curl -fsS http://localhost:3000/api/health >/dev/null && curl -fsS http://localhost:5173 >/dev/null; then
               echo "API and web are ready"; exit 0
             fi
             sleep 2
@@ -124,7 +124,7 @@ jobs:
       - name: Run Playwright browser E2E
         env:
           CI: true
-          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
         run: pnpm --filter @treasury/web test:e2e
       - name: Upload Playwright report on failure
         if: failure()
