@@ -8,6 +8,7 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { ListTicketsDto } from './dto/list-tickets.dto';
 import { CreateApprovalRuleDto } from './dto/create-approval-rule.dto';
+import { UpdateApprovalRuleDto } from './dto/update-approval-rule.dto';
 import { DecideApprovalDto } from './dto/decide-approval.dto';
 import { TreasuryTicketsService } from './treasury-tickets.service';
 const COMPANY_TICKET_ROLES = ['REQUESTER', 'TREASURY_MAKER', 'TREASURY_CHECKER', 'APPROVER', 'ADMIN'];
@@ -46,6 +47,11 @@ export class TreasuryTicketsController {
   @Post('approval-rules') @RequireCompanyRoles('ADMIN')
   createApprovalRule(@CurrentUser() user: AuthenticatedPrincipal, @Param('companyId') companyId: string, @Body() dto: CreateApprovalRuleDto) {
     return this.tickets.createApprovalRule(user.userId, companyId, dto);
+  }
+  @Patch('approval-rules/:ruleId') @RequireCompanyRoles('ADMIN')
+  updateApprovalRule(@CurrentUser() user: AuthenticatedPrincipal, @Param('companyId') companyId: string,
+    @Param('ruleId') ruleId: string, @Body() dto: UpdateApprovalRuleDto) {
+    return this.tickets.updateApprovalRule(user.userId, companyId, ruleId, dto);
   }
   @Get('approvals/pending') @RequireCompanyRoles('APPROVER', 'TREASURY_CHECKER', 'ADMIN')
   pendingApprovals(@CurrentUser() user: AuthenticatedPrincipal, @Param('companyId') companyId: string) {
