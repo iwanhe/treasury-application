@@ -113,9 +113,10 @@ export class TreasuryTicketsService {
       });
       const rules = selectApplicableApprovalRules(candidateRules, companyId, existing.currencyCode, existing.amount.toString());
       if (!rules.length) throw new BadRequestException('No active approval rule matches this company, transaction type, amount, and currency.');
-      await tx.ticketApproval.deleteMany({ where: { ticketId } });
+      const previousCycle = await tx.ticketApproval.aggregate({ where: { ticketId }, _max: { cycle: true } });
+      const cycle = (previousCycle._max.cycle ?? 0) + 1;
       await tx.ticketApproval.createMany({ data: rules.map(rule => ({
-        ticketId, sequence: rule.sequence, approverId: rule.approverUserId, roleCode: rule.approverRoleCode,
+        ticketId, cycle, sequence: rule.sequence, approverId: rule.approverUserId, roleCode: rule.approverRoleCode,
         decision: ApprovalDecision.PENDING
       }))});
       const ticket = await tx.treasuryTicket.update({ where: { id: ticketId },
@@ -123,7 +124,7 @@ export class TreasuryTicketsService {
       await tx.auditLog.create({ data: { actorId, ticketId, companyCode: existing.company.code, action: AuditAction.SUBMIT,
         entityType: 'TREASURY_TICKET', entityId: ticketId,
         beforeData: { status: existing.status }, afterData: { status: ticket.status, amount: existing.amount.toString(),
-          currencyCode: existing.currencyCode, approvalSequences: rules.map(r => r.sequence) } }});
+          currencyCode: existing.currencyCode, approvalCycle: cycle, approvalSequences: rules.map(r => r.sequence) } }});
       return ticket;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
@@ -156,6 +157,9 @@ export class TreasuryTicketsService {
       const company = await tx.company.findFirst({ where: { id: companyId, status: 'ACTIVE' }, select: { id: true, code: true } });
       if (!company) throw new NotFoundException('Company not found.');
       if (dto.approverRoleCode) {
+        if (!['APPROVER', 'TREASURY_CHECKER', 'ADMIN'].includes(dto.approverRoleCode)) {
+          throw new BadRequestException('Approver role must be APPROVER, TREASURY_CHECKER, or ADMIN.');
+        }
         const role = await tx.role.findUnique({ where: { code: dto.approverRoleCode }, select: { id: true } });
         if (!role) throw new NotFoundException('Approver role does not exist.');
       } else {
@@ -210,7 +214,8 @@ export class TreasuryTicketsService {
         if (!next) nextStatus = TicketStatus.APPROVED;
       }
       if (nextStatus !== TicketStatus.IN_REVIEW) {
-        await tx.ticketApproval.deleteMany({ where: { ticketId, decision: ApprovalDecision.PENDING } });
+        await tx.ticketApproval.updateMany({ where: { ticketId, decision: ApprovalDecision.PENDING },
+          data: { decision: ApprovalDecision.CANCELLED, comments: 'Cancelled because the approval process ended.' } });
       }
       await tx.treasuryTicket.update({ where: { id: ticketId }, data: { status: nextStatus } });
       const action = dto.decision === 'APPROVED' ? AuditAction.APPROVE : dto.decision === 'REJECTED' ? AuditAction.REJECT : AuditAction.RETURN;
