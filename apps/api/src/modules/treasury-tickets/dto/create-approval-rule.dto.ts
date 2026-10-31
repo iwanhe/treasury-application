@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsUUID, Matches, Max, Min, ValidateIf } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, Max, Min, ValidateIf } from 'class-validator';
 import { RequestType } from '@prisma/client';
 export class CreateApprovalRuleDto {
   @IsEnum(RequestType) requestType!: RequestType;
