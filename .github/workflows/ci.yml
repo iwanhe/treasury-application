@@ -36,6 +36,8 @@ jobs:
         run: pnpm --filter @treasury/api prisma:deploy
       - run: pnpm --filter @treasury/api test
       - run: pnpm --filter @treasury/api build
+      - name: Type-check demo seed
+        run: pnpm --filter @treasury/api check:seed
       - run: pnpm --filter @treasury/web build
       - name: Run frontend unit tests
         run: pnpm --filter @treasury/web test
