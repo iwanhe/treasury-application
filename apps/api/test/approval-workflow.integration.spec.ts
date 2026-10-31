@@ -196,6 +196,30 @@ describe('conditional approval workflow integration', () => {
     } finally { await cleanup(f); }
   });
 
+  it('creates, updates, deactivates, and scopes company approval rules with audit history', async () => {
+    const f = await fixture();
+    try {
+      const created = await service.createApprovalRule(f.requesterId, f.companyId, {
+        requestType: RequestType.FINANCIAL_INVESTMENT, sequence: 1, currencyCode: 'IDR',
+        minAmount: '1000000', maxAmount: '5000000', approverRoleCode: 'APPROVER'
+      });
+      assert.equal(created.isActive, true);
+      assert.equal(await prisma.auditLog.count({ where: { entityType: 'APPROVAL_RULE', entityId: created.id, action: 'CREATE' } }), 1);
+
+      const updated = await service.updateApprovalRule(f.requesterId, f.companyId, created.id, {
+        minAmount: '1500000', maxAmount: '6000000', isActive: false
+      });
+      assert.equal(updated.minAmount.toString(), '1500000');
+      assert.equal(updated.maxAmount?.toString(), '6000000');
+      assert.equal(updated.isActive, false);
+      assert.equal(await prisma.auditLog.count({ where: { entityType: 'APPROVAL_RULE', entityId: created.id, action: 'UPDATE' } }), 1);
+      assert.equal((await service.listApprovalRules(f.companyId)).some(rule => rule.id === created.id), false);
+
+      const global = await addGlobalRule(f, 1);
+      await assert.rejects(() => service.updateApprovalRule(f.requesterId, f.companyId, global.id, { isActive: false }), NotFoundException);
+    } finally { await cleanup(f); }
+  });
+
   it('allows at most one concurrent decision for the same pending step', async () => {
     const f = await fixture();
     try {
