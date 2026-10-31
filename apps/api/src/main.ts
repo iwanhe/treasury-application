@@ -9,7 +9,7 @@ async function bootstrap() {
   app.enableCors({ origin: allowedOrigins, methods: ['GET', 'POST', 'PATCH', 'OPTIONS'], allowedHeaders: ['Authorization', 'Content-Type'] });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.setGlobalPrefix('api');
-  const port = Number(process.env.PORT ?? 3000);
+  const port = Number(process.env.API_PORT ?? process.env.PORT ?? 3000);
   await app.listen(port, '0.0.0.0');
 }
 void bootstrap();
