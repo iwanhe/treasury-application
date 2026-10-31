@@ -87,7 +87,7 @@ test('Maker → Checker → Admin approval and return/edit/resubmit lifecycle', 
 
   const finalRow = page.getByRole('row').filter({ hasText: `${returnTitle} revised` });
   await expect(finalRow.getByText('APPROVED')).toBeVisible();
-  await finalRow.getByRole('button', { name: /E2E return/ }).click();
+  await finalRow.getByRole('button').first().click();
   await expect(page.getByText('Riwayat approval')).toBeVisible();
   await expect(page.getByText('APPROVED').last()).toBeVisible();
 });
