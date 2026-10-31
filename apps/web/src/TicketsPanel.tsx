@@ -3,6 +3,7 @@ import { Button, Card, Col, Descriptions, Form, Input, InputNumber, Modal, Row, 
 import type { ColumnsType } from 'antd/es/table';
 import { api } from './api';
 
+type PendingApproval = { id:string; sequence:number; roleCode:string|null; decision:string; ticket:Ticket };
 type Ticket = {
   id: string; ticketNo: string; companyId: string; requesterId: string; type: string; title: string;
   description: string; amount: string; currencyCode: string; status: string; priority: string;
@@ -14,8 +15,10 @@ const types = ['BANK_ACCOUNT_OPEN','BANK_ACCOUNT_CLOSE','INTERNET_BANKING','FINA
 const priorities = ['LOW','NORMAL','HIGH','URGENT'].map(value => ({ value, label: value }));
 const statusColor: Record<string,string> = { DRAFT:'default', SUBMITTED:'processing', IN_REVIEW:'blue', APPROVED:'success', REJECTED:'error', RETURNED:'warning', COMPLETED:'success', CANCELLED:'default', IN_PROGRESS:'cyan' };
 
-export default function TicketsPanel({ companyId, canCreate }: { companyId: string; canCreate: boolean }) {
+export default function TicketsPanel({ companyId, canCreate, canApprove }: { companyId: string; canCreate: boolean; canApprove: boolean }) {
   const [rows,setRows] = useState<Ticket[]>([]);
+  const [inbox,setInbox] = useState<PendingApproval[]>([]);
+  const [inboxLoading,setInboxLoading] = useState(false);
   const [loading,setLoading] = useState(false);
   const [status,setStatus] = useState<string>();
   const [open,setOpen] = useState(false);
@@ -32,6 +35,26 @@ export default function TicketsPanel({ companyId, canCreate }: { companyId: stri
     finally { setLoading(false); }
   }
   useEffect(()=>{ void load(); },[companyId,status]);
+  async function loadInbox() {
+    if (!canApprove) return;
+    setInboxLoading(true);
+    try { setInbox(await api<PendingApproval[]>('/companies/' + companyId + '/approvals/pending')); }
+    catch(e) { msg.error(e instanceof Error ? e.message : 'Gagal memuat approval inbox.'); }
+    finally { setInboxLoading(false); }
+  }
+  useEffect(()=>{ void loadInbox(); },[companyId,canApprove]);
+  async function decide(item: PendingApproval, decision:'APPROVED'|'REJECTED'|'RETURNED') {
+    const labels = { APPROVED:'Setujui', REJECTED:'Tolak', RETURNED:'Kembalikan' };
+    Modal.confirm({ title:labels[decision] + ' pengajuan?', content:item.ticket.ticketNo + ' — ' + item.ticket.title,
+      okText:labels[decision], cancelText:'Batal', okButtonProps:decision === 'REJECTED' ? {danger:true} : {},
+      onOk:async () => {
+        await api('/companies/' + companyId + '/tickets/' + item.ticket.id + '/approvals/' + item.id + '/decision',
+          {method:'POST',body:JSON.stringify({decision})});
+        msg.success('Keputusan approval berhasil disimpan.');
+        await Promise.all([loadInbox(),load()]);
+      }
+    });
+  }
 
   async function saveDraft() {
     const v = await form.validateFields();
@@ -85,8 +108,23 @@ export default function TicketsPanel({ companyId, canCreate }: { companyId: stri
       {(t.status==='DRAFT'||t.status==='SUBMITTED') && <Button size="small" danger onClick={()=>void action(t,'cancel')}>Cancel</Button>}
     </Space>}
   ];
+  const inboxColumns: ColumnsType<PendingApproval> = [
+    {title:'Nomor ticket',dataIndex:['ticket','ticketNo'],width:185},
+    {title:'Pengajuan',render:(_,a)=><><Typography.Text strong>{a.ticket.title}</Typography.Text><div className="subtle">{a.ticket.type.replaceAll('_',' ')} · Step {a.sequence}</div></>},
+    {title:'Nominal',render:(_,a)=><Typography.Text>{a.ticket.currencyCode.trim()} {Number(a.ticket.amount).toLocaleString('id-ID')}</Typography.Text>},
+    {title:'Requester',dataIndex:['ticket','requesterId'],render:(v:string)=>v.slice(0,8)+'…'},
+    {title:'Keputusan',render:(_,a)=><Space>
+      <Button size="small" type="primary" onClick={()=>void decide(a,'APPROVED')}>Approve</Button>
+      <Button size="small" danger onClick={()=>void decide(a,'REJECTED')}>Reject</Button>
+      <Button size="small" onClick={()=>void decide(a,'RETURNED')}>Return</Button>
+    </Space>}
+  ];
   return <>
     {contextHolder}
+    {canApprove && <Card className="panel" style={{marginBottom:20}} bordered={false} styles={{body:{padding:0}}}>
+      <div className="panel-heading"><div><Typography.Title level={5} style={{margin:0}}>Approval Inbox</Typography.Title><Typography.Text type="secondary">Pengajuan yang menunggu keputusan Anda pada perusahaan ini.</Typography.Text></div><Tag color="processing">{inbox.length} pending</Tag></div>
+      <div className="panel-body"><Table rowKey="id" columns={inboxColumns} dataSource={inbox} loading={inboxLoading} pagination={{pageSize:5}} scroll={{x:850}} locale={{emptyText:'Tidak ada approval yang menunggu.'}} /></div>
+    </Card>}
     <Card className="panel" style={{marginBottom:20}} bordered={false} styles={{body:{padding:0}}}>
       <div className="panel-heading">
         <div><Typography.Title level={5} style={{margin:0}}>Treasury Ticket Management</Typography.Title><Typography.Text type="secondary">Buat draft, pantau status, dan kelola pengajuan treasury.</Typography.Text></div>
