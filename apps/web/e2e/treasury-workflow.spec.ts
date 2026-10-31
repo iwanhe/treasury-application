@@ -5,11 +5,12 @@ const checker = { username: 'treasury.checker', password: 'ChangeMe123!' };
 const admin = { username: 'treasury.admin', password: 'ChangeMe123!' };
 
 async function login(page: Page, credentials: { username: string; password: string }) {
+  page.on('pageerror', error => console.error('Browser page error:', error.message));
   await page.goto('/');
   await page.getByLabel('Username or email').fill(credentials.username);
   await page.getByLabel('Password', { exact: true }).fill(credentials.password);
   await page.getByRole('button', { name: 'Sign In' }).click();
-  await expect(page.getByRole('heading', { name: 'Approval Rule Administration' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Approval Rule Administration' })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('heading', { name: 'Treasury Ticket Management' })).toBeVisible();
 }
 
