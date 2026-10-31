@@ -172,6 +172,55 @@ describe('conditional approval workflow integration', () => {
     } finally { await cleanup(f); }
   });
 
+  it('edits draft and returned tickets only by the requester and records audit history', async () => {
+    const f = await fixture();
+    try {
+      const ticket = await service.create(f.requesterId, f.companyId, {
+        type: RequestType.FINANCIAL_INVESTMENT, title: 'Original title', description: 'Original description',
+        amount: '1000000', currencyCode: 'IDR'
+      });
+      await assert.rejects(() => service.updateDraft(f.approverId, f.companyId, ticket.id,
+        { title: 'Unauthorized edit' }), ForbiddenException);
+      const updated = await service.updateDraft(f.requesterId, f.companyId, ticket.id,
+        { title: 'Updated title', amount: '1500000' });
+      assert.equal(updated.title, 'Updated title');
+      assert.equal(updated.amount.toString(), '1500000');
+      assert.equal(await prisma.auditLog.count({ where: { ticketId: ticket.id, action: 'UPDATE' } }), 1);
+      await addRule(f, 1, 'APPROVER');
+      await service.submit(f.requesterId, f.companyId, ticket.id);
+      await assert.rejects(() => service.updateDraft(f.requesterId, f.companyId, ticket.id,
+        { title: 'Edit while in review' }), BadRequestException);
+      const step = (await approvals(ticket.id))[0];
+      await service.decideApproval(f.approverId, f.companyId, ticket.id, step.id,
+        { decision: 'RETURNED', comments: 'Please revise' });
+      const returned = await service.updateDraft(f.requesterId, f.companyId, ticket.id,
+        { description: 'Revised description' });
+      assert.equal(returned.description, 'Revised description');
+      assert.equal(await prisma.auditLog.count({ where: { ticketId: ticket.id, action: 'UPDATE' } }), 2);
+    } finally { await cleanup(f); }
+  });
+
+  it('shows only the current actionable approval step in each approver inbox', async () => {
+    const f = await fixture();
+    try {
+      await addRule(f, 1, 'APPROVER');
+      await addRule(f, 2, 'TREASURY_CHECKER');
+      const checkerRole = await prisma.role.findUniqueOrThrow({ where: { code: 'TREASURY_CHECKER' } });
+      await prisma.userCompanyRole.create({ data: { userId: f.approverId, companyId: f.companyId, roleId: checkerRole.id } });
+      const ticket = await createAndSubmit(f);
+      const steps = await approvals(ticket.id);
+      const firstInbox = await service.pendingApprovals(f.approverId, f.companyId);
+      assert.deepEqual(firstInbox.map(item => item.id), [steps[0].id]);
+      const secondUserInbox = await service.pendingApprovals(f.secondApproverId, f.companyId);
+      assert.deepEqual(secondUserInbox.map(item => item.id), [steps[0].id]);
+      await service.decideApproval(f.approverId, f.companyId, ticket.id, steps[0].id, { decision: 'APPROVED' });
+      const afterFirst = await service.pendingApprovals(f.approverId, f.companyId);
+      assert.deepEqual(afterFirst.map(item => item.id), [steps[1].id]);
+      const otherUserAfterFirst = await service.pendingApprovals(f.secondApproverId, f.companyId);
+      assert.deepEqual(otherUserAfterFirst, []);
+    } finally { await cleanup(f); }
+  });
+
   it('enforces maker-checker separation', async () => {
     const f = await fixture();
     try {
