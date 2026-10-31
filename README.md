@@ -3,43 +3,54 @@
 Enterprise Treasury Service Request and Financial Information Portal.
 
 ## Technology
-- React + TypeScript + Vite + Ant Design
+- React 19 + TypeScript + Vite + Ant Design
 - NestJS modular monolith REST API
-- PostgreSQL + Prisma ORM
-- Redis for background jobs (planned)
-- Docker Compose and GitHub Actions
+- PostgreSQL 16 + Prisma ORM
 - Keycloak OIDC for local development; Microsoft Entra ID is a future provider option
+- Docker Compose and GitHub Actions CI
 
-## MVP scope
-- Development authentication foundation
-- Multi-company access model
-- Treasury service request/ticket management
-- Conditional approval workflow foundation
-- Treasury dashboard foundation
+## MVP workflow
+- Multi-company access model with company-scoped roles
+- Treasury ticket draft, edit, submit, detail, and cancellation
+- Sequential approval workflow with maker-checker separation
+- Return/reject and resubmission approval cycles
+- Company-specific approval rules with global fallback
+- Audit events for ticket and approval actions
 
-Planned increments: SLA management, email notifications, financial data upload and viewing, Excel export, Oracle EBS integration, and SAP integration.
+## Try the application locally
 
-## Local development
+Follow **[docs/user-trial-guide.md](docs/user-trial-guide.md)**. It provisions a local Keycloak realm with demo Maker, Checker, and Administrator accounts, two demo companies, and seeded two-step IDR approval rules. The demo is intended for business-user acceptance testing on a developer machine.
 
-1. Copy `.env.example` to the API environment file used by your local workflow.
-2. Start infrastructure: `docker compose up -d postgres redis keycloak`.
-3. Open Keycloak at http://localhost:8080 and select realm `treasury-dev`.
-4. Follow [Keycloak development setup](docs/keycloak-development.md) for OIDC configuration and identity provisioning.
-5. Copy `apps/web/.env.example` to `apps/web/.env.local`; use `http://localhost:3000/api` as the API base URL.
-6. Install dependencies and start the API/web apps using `pnpm dev:api` and `pnpm dev:web`.
+Quick start (see the guide for full instructions):
 
-The Keycloak realm import includes development-only credentials. Do not expose the development setup publicly or reuse its credentials.
+```bash
+docker compose up -d postgres keycloak
+pnpm install
+# Copy apps/api/.env.example to apps/api/.env
+# Copy apps/web/.env.example to apps/web/.env.local
+pnpm --filter @treasury/api prisma:generate
+pnpm --filter @treasury/api prisma:deploy
+pnpm --filter @treasury/api prisma:seed
+# Terminal 1: pnpm dev:api
+# Terminal 2: pnpm dev:web
+```
 
-## Repository status
-This is a development starter, not production-ready. Database migrations, production identity lifecycle, comprehensive authorization tests, and deployment hardening remain outstanding.
+Open [http://localhost:5173](http://localhost:5173).
 
-## Security requirements before production
-- SSO/OIDC integration and corporate identity lifecycle provisioning
-- Enforced authorization and company-level data isolation
-- PostgreSQL Row-Level Security where appropriate
-- Approval segregation of duties
-- Immutable audit trail and retention policy
-- Secrets management, attachment scanning, and security testing
-- No banking passwords or credentials stored in ticket records
+## CI
 
-See the `docs/` directory for architecture, business process, API, and roadmap documentation.
+GitHub Actions validates Prisma schema and migrations, API tests/build, demo seed TypeScript, React build and Vitest unit tests, Keycloak realm JSON, and Docker Compose configuration.
+
+## Scope not yet implemented
+
+Production deployment hardening, corporate identity lifecycle, email notifications, SLA automation, attachment upload/scanning, Excel export, and end-to-end Oracle EBS/SAP/bank integrations remain future increments. This repository is **not production-ready**. Do not expose the local development Keycloak realm or reuse demo credentials outside a disposable local environment.
+
+## Security before production
+
+- Corporate SSO/identity lifecycle, MFA, TLS, secrets management, and least privilege
+- Company-level authorization verification and segregation-of-duties testing
+- Audit retention/immutability policy and security monitoring
+- Backup/restore and disaster recovery drills
+- Attachment scanning and secure object storage before enabling file uploads
+- Penetration testing and operational readiness review
+- Database migration baseline/adoption plan for any existing database
