@@ -38,7 +38,7 @@ The SPA rewrite is provided by `apps/web/vercel.json`.
   - `WEB_ORIGIN`: exact web deployment origin, not a wildcard
   - `DEMO_AUTH_ENABLED=true`: explicitly enables demo login
   - `DEMO_TOKEN_SECRET`: random secret of at least 32 characters, unique to this environment
-  - `DEMO_ACCESS_CODE`: shared access code of at least 12 characters; provide it only to the intended demo user
+  - `DEMO_ACCESS_CODE`: shared access code of at least 24 characters (prefer 32+ random characters); provide it only to the intended demo user
   - `OIDC_ISSUER`, `OIDC_AUDIENCE`, `OIDC_JWKS_URI`: configure these only if Keycloak mode is also required.
 
 The demo login endpoint accepts only the fixed `admin`, `maker`, and `checker` identities. It validates a shared access code, signs a two-hour HS256 JWT on the server, and uses the seeded user's external ID as the subject. The API guard verifies signature, issuer, audience, expiry, and then resolves the active user from PostgreSQL. Company roles are still checked against database memberships; browser-supplied user IDs and roles are not trusted.
