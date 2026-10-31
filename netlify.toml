@@ -1,0 +1,12 @@
+[build]
+  command = "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @treasury/web build"
+  publish = "apps/web/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  PNPM_VERSION = "10.18.0"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
