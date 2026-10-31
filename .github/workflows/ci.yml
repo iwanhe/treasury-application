@@ -37,6 +37,8 @@ jobs:
       - run: pnpm --filter @treasury/api test
       - run: pnpm --filter @treasury/api build
       - run: pnpm --filter @treasury/web build
+      - name: Run frontend unit tests
+        run: pnpm --filter @treasury/web test
       - name: Validate Keycloak realm JSON
         run: python -m json.tool docker/keycloak/treasury-dev-realm.json > /dev/null
       - name: Validate Docker Compose
