@@ -25,7 +25,8 @@ Planned increments: SLA management, email notifications, financial data upload a
 2. Start infrastructure: `docker compose up -d postgres redis keycloak`.
 3. Open Keycloak at http://localhost:8080 and select realm `treasury-dev`.
 4. Follow [Keycloak development setup](docs/keycloak-development.md) for OIDC configuration and identity provisioning.
-5. Install dependencies and start the API/web apps using the scripts in the root package.
+5. Copy `apps/web/.env.example` to `apps/web/.env.local`; use `http://localhost:3000/api` as the API base URL.
+6. Install dependencies and start the API/web apps using `pnpm dev:api` and `pnpm dev:web`.
 
 The Keycloak realm import includes development-only credentials. Do not expose the development setup publicly or reuse its credentials.
 
